@@ -27,14 +27,20 @@ Configure Roarm in your `config/config.exs` file:
 
 ```elixir
 config :roarm,
-  port: "/dev/cu.usbserial-110",
+  port: "/dev/cu.usbserial-110",  # macOS
+  # port: "/dev/ttyUSB0",         # Linux
   baudrate: 115200,
   robot_type: :roarm_m2,
   timeout: 5000
 ```
 
+**Port Configuration by Platform:**
+- **macOS**: Usually `/dev/cu.usbserial-110` or similar `/dev/cu.usbserial-*`
+- **Linux**: Usually `/dev/ttyUSB0` or `/dev/ttyACM0`
+- **Windows**: Usually `COM3`, `COM4`, etc.
+
 Available configuration options:
-- `:port` - Serial port path (e.g., "/dev/ttyUSB0", "/dev/cu.usbserial-110")
+- `:port` - Serial port path (platform-specific, see above)
 - `:baudrate` - Communication speed (default: 115200)
 - `:robot_type` - Type of robot (:roarm_m2, :roarm_m2_pro, :roarm_m3, :roarm_m3_pro)
 - `:communication_server_name` - Name for communication server (default: Roarm.Communication)
@@ -52,6 +58,8 @@ Available configuration options:
 # Robot is automatically connected and ready to use
 Roarm.Robot.move_to_position(%{x: 100.0, y: 0.0, z: 150.0, t: 0.0})
 ```
+
+**Note:** `Roarm.start_robot()` automatically starts the required registry for GenServer management. For production applications, you should add the registry to your application's supervision tree (see Production Setup below).
 
 ### 2. Manual Setup (Advanced)
 
@@ -162,6 +170,40 @@ You can control multiple robots simultaneously:
 # Control specific robots
 Roarm.Robot.home(server_name: :robot1)
 Roarm.Robot.home(server_name: :robot2)
+```
+
+## Production Setup
+
+For production applications, you should add the Roarm registry to your application's supervision tree instead of relying on the automatic startup:
+
+```elixir
+# In your application.ex file
+defmodule MyApp.Application do
+  use Application
+
+  def start(_type, _args) do
+    children = [
+      # Add the Roarm registry to your supervision tree
+      {Registry, keys: :unique, name: Roarm.Registry},
+
+      # Your other supervised processes...
+      # MyApp.Repo,
+      # MyApp.Worker,
+    ]
+
+    opts = [strategy: :one_for_one, name: MyApp.Supervisor]
+    Supervisor.start_link(children, opts)
+  end
+end
+```
+
+Then you can start robots without the automatic registry startup:
+
+```elixir
+# Registry is already supervised, so just start robot processes
+{:ok, comm_pid} = Roarm.Communication.start_link()
+{:ok, robot_pid} = Roarm.Robot.start_link([port: "/dev/cu.usbserial-110"])
+:ok = Roarm.Robot.connect()
 ```
 
 ## Next Steps

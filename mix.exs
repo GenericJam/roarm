@@ -10,7 +10,7 @@ defmodule Roarm.MixProject do
       deps: deps(),
 
       # Documentation
-      name: "RoArm Elixir",
+      name: "RoArm",
       description: "Elixir library for controlling Waveshare RoArm robot arms",
       package: package(),
       docs: docs()
@@ -40,7 +40,7 @@ defmodule Roarm.MixProject do
       licenses: ["MIT"],
       maintainers: ["Developer"],
       links: %{
-        "GitHub" => "https://github.com/user/roarm",
+        "GitHub" => "https://github.com/GenericJam/roarm",
         "Documentation" => "https://hexdocs.pm/roarm",
         "Waveshare RoArm-M2-S" => "https://www.waveshare.com/wiki/RoArm-M2-S"
       },
@@ -53,8 +53,8 @@ defmodule Roarm.MixProject do
     [
       main: "Roarm",
       name: "Roarm",
-      source_url: "https://github.com/user/roarm",
-      homepage_url: "https://github.com/user/roarm",
+      source_url: "https://github.com/GenericJam/roarm",
+      homepage_url: "https://github.com/GenericJam/roarm",
       extras: [
         "README.md",
         "CHANGELOG.md": [title: "Changelog"],
