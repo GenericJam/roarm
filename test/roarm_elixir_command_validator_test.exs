@@ -231,4 +231,91 @@ defmodule Roarm.CommandValidatorTest do
       assert validated.delay == 60000  # Clamped to max
     end
   end
+
+  describe "Command schemas access" do
+    test "command_schemas returns all schemas" do
+      schemas = CommandValidator.command_schemas()
+
+      assert is_map(schemas)
+      assert map_size(schemas) > 0
+
+      # Check that major commands are present
+      assert Map.has_key?(schemas, 100)   # Home position
+      assert Map.has_key?(schemas, 122)   # All joints control
+      assert Map.has_key?(schemas, 1041)  # Position control
+      assert Map.has_key?(schemas, 114)   # LED control
+      assert Map.has_key?(schemas, 220)   # Create mission
+    end
+
+    test "schemas have correct structure" do
+      schemas = CommandValidator.command_schemas()
+
+      # Test a few key schemas
+      home_schema = schemas[100]
+      assert home_schema.description == "Home position"
+      assert is_map(home_schema.parameters)
+
+      joint_schema = schemas[122]
+      assert joint_schema.description == "All joints control (degrees)"
+      assert is_map(joint_schema.parameters)
+      assert Map.has_key?(joint_schema.parameters, :b)
+      assert Map.has_key?(joint_schema.parameters, :spd)
+
+      position_schema = schemas[1041]
+      assert position_schema.description == "Position control"
+      x_param = position_schema.parameters[:x]
+      assert x_param.type == :float
+      assert x_param.min == -500.0
+      assert x_param.max == 500.0
+      assert x_param.required == true
+    end
+
+    test "can access parameter details for validation" do
+      schemas = CommandValidator.command_schemas()
+
+      # Test position control parameters
+      pos_params = schemas[1041].parameters
+      assert pos_params[:x].min == -500.0
+      assert pos_params[:x].max == 500.0
+      assert pos_params[:y].min == -500.0
+      assert pos_params[:y].max == 500.0
+      assert pos_params[:z].min == 0.0
+      assert pos_params[:z].max == 500.0
+      assert pos_params[:t].min == -180.0
+      assert pos_params[:t].max == 180.0
+
+      # Test joint control parameters
+      joint_params = schemas[122].parameters
+      assert joint_params[:b].min == -180.0
+      assert joint_params[:b].max == 180.0
+      assert joint_params[:spd].min == 1
+      assert joint_params[:spd].max == 4096
+      assert joint_params[:spd].default == 1000
+    end
+
+    test "schemas can be used for custom validation" do
+      schemas = CommandValidator.command_schemas()
+
+      # Example: Check if a T-code exists
+      assert Map.has_key?(schemas, 100)
+      refute Map.has_key?(schemas, 999)
+
+      # Example: Get parameter names for a command
+      joint_param_names = Map.keys(schemas[122].parameters)
+      assert :b in joint_param_names
+      assert :s in joint_param_names
+      assert :spd in joint_param_names
+
+      # Example: Check parameter requirements
+      pos_params = schemas[1041].parameters
+      required_params = pos_params
+                       |> Enum.filter(fn {_, spec} -> Map.get(spec, :required, false) end)
+                       |> Enum.map(fn {name, _} -> name end)
+
+      assert :x in required_params
+      assert :y in required_params
+      assert :z in required_params
+      refute :t in required_params  # has default, not required
+    end
+  end
 end

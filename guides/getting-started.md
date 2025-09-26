@@ -80,24 +80,42 @@ Roarm.Robot.home()
 # Move to home position
 {:ok, _response} = Roarm.Robot.home()
 
-# Move individual joints (in degrees)
+# Move individual joints (all angles in degrees, -180.0 to 180.0°)
 {:ok, _response} = Roarm.Robot.move_joints(%{
-  j1: 45.0,   # Base rotation
-  j2: 30.0,   # Shoulder
-  j3: -45.0,  # Elbow
-  j4: 0.0     # Wrist
+  j1: 45.0,   # Base rotation (around vertical axis)
+  j2: 30.0,   # Shoulder (arm lift/lower)
+  j3: -45.0,  # Elbow (forearm angle)
+  j4: 0.0     # Wrist (end effector rotation)
 })
 
-# Move to a specific position (in mm)
+# Move to a specific position
 {:ok, _response} = Roarm.Robot.move_to_position(%{
-  x: 150.0,
-  y: 0.0,
-  z: 200.0,
-  t: 0.0  # Tool angle
+  x: 150.0,  # X coordinate (-500.0 to 500.0 mm)
+  y: 0.0,    # Y coordinate (-500.0 to 500.0 mm)
+  z: 200.0,  # Z coordinate (0.0 to 500.0 mm)
+  t: 0.0     # Tool rotation angle (-180.0 to 180.0°)
 })
 ```
 
-### 4. LED Control
+### 4. Partial Updates
+
+Both position and joint movements support partial updates - only specify the values you want to change:
+
+```elixir
+# Partial position update - only change Y coordinate, maintain current X, Z, and T
+{:ok, _response} = Roarm.Robot.move_to_position(%{y: 50.0})
+
+# Partial joint update - only move joint 1, keep others at current positions
+{:ok, _response} = Roarm.Robot.move_joints(%{j1: 90.0})
+
+# Update multiple coordinates/joints while maintaining others
+{:ok, _response} = Roarm.Robot.move_to_position(%{x: 100.0, z: 250.0})
+{:ok, _response} = Roarm.Robot.move_joints(%{j2: 45.0, j4: -30.0})
+```
+
+This is especially useful for incremental movements and fine adjustments without needing to track all current values.
+
+### 5. LED Control
 
 ```elixir
 # Turn on the gripper LED

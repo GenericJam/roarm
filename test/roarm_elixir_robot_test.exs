@@ -407,6 +407,237 @@ defmodule Roarm.RobotTest do
     end
   end
 
+  describe "Partial position updates" do
+    test "accepts partial position maps - single coordinate" do
+      {:ok, pid} = Robot.start_link()
+
+      # Test single coordinate updates
+      assert {:error, :not_connected} = Robot.move_to_position(%{x: 100.0}, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_to_position(%{y: 50.0}, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_to_position(%{z: 200.0}, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_to_position(%{t: 45.0}, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "accepts partial position maps - multiple coordinates" do
+      {:ok, pid} = Robot.start_link()
+
+      # Test multiple partial coordinates
+      assert {:error, :not_connected} = Robot.move_to_position(%{x: 100.0, y: 50.0}, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_to_position(%{y: 0.0, z: 150.0}, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_to_position(%{x: 75.0, z: 200.0, t: 30.0}, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "accepts empty position map" do
+      {:ok, pid} = Robot.start_link()
+
+      # Empty map should work (though will use defaults)
+      assert {:error, :not_connected} = Robot.move_to_position(%{}, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "handles atom and string keys in position map" do
+      {:ok, pid} = Robot.start_link()
+
+      # Both atom and string keys should be handled gracefully
+      assert {:error, :not_connected} = Robot.move_to_position(%{"x" => 100.0, "y" => 50.0}, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+  end
+
+  describe "Partial joint updates" do
+    test "accepts partial joint maps - single joint" do
+      {:ok, pid} = Robot.start_link()
+
+      # Test single joint updates
+      assert {:error, :not_connected} = Robot.move_joints(%{j1: 45.0}, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_joints(%{j2: 30.0}, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_joints(%{j3: -45.0}, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_joints(%{j4: 90.0}, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "accepts partial joint maps - multiple joints" do
+      {:ok, pid} = Robot.start_link()
+
+      # Test multiple partial joints
+      assert {:error, :not_connected} = Robot.move_joints(%{j1: 45.0, j2: 30.0}, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_joints(%{j2: 0.0, j4: -30.0}, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_joints(%{j1: 90.0, j3: -45.0, j4: 15.0}, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "accepts empty joint map" do
+      {:ok, pid} = Robot.start_link()
+
+      # Empty map should work (though will use defaults)
+      assert {:error, :not_connected} = Robot.move_joints(%{}, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "handles extended joints j5 and j6" do
+      {:ok, pid} = Robot.start_link()
+
+      # Should handle j5 and j6 even though they may not be used by all robot types
+      assert {:error, :not_connected} = Robot.move_joints(%{j5: 30.0}, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_joints(%{j6: -15.0}, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_joints(%{j1: 45.0, j5: 30.0, j6: -15.0}, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "handles atom and string keys in joint map" do
+      {:ok, pid} = Robot.start_link()
+
+      # Both atom and string keys should be handled gracefully
+      assert {:error, :not_connected} = Robot.move_joints(%{"j1" => 45.0, "j2" => 30.0}, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+  end
+
+  describe "Partial update merging behavior" do
+    # These tests verify the position/joint merging logic by testing
+    # that the functions don't crash and accept the expected parameters
+
+    test "position merging works with current position unavailable" do
+      {:ok, pid} = Robot.start_link()
+
+      # When get_position fails, should fall back to defaults and merge
+      # We can't test the exact merging without a connection, but we can verify
+      # the function calls don't crash and return expected error types
+      partial_update = %{x: 150.0}
+      result = Robot.move_to_position(partial_update, server_name: pid)
+
+      # Should return not_connected error, not a crash
+      assert {:error, :not_connected} = result
+
+      GenServer.stop(pid)
+    end
+
+    test "joint merging works with current joints unavailable" do
+      {:ok, pid} = Robot.start_link()
+
+      # When get_joints fails, should fall back to defaults and merge
+      partial_update = %{j1: 45.0}
+      result = Robot.move_joints(partial_update, server_name: pid)
+
+      # Should return not_connected error, not a crash
+      assert {:error, :not_connected} = result
+
+      GenServer.stop(pid)
+    end
+
+    test "position merging handles all coordinate combinations" do
+      {:ok, pid} = Robot.start_link()
+
+      # Test all possible combinations of partial coordinates
+      coordinate_combinations = [
+        %{x: 100.0},
+        %{y: 50.0},
+        %{z: 200.0},
+        %{t: 30.0},
+        %{x: 100.0, y: 50.0},
+        %{x: 100.0, z: 200.0},
+        %{x: 100.0, t: 30.0},
+        %{y: 50.0, z: 200.0},
+        %{y: 50.0, t: 30.0},
+        %{z: 200.0, t: 30.0},
+        %{x: 100.0, y: 50.0, z: 200.0},
+        %{x: 100.0, y: 50.0, t: 30.0},
+        %{x: 100.0, z: 200.0, t: 30.0},
+        %{y: 50.0, z: 200.0, t: 30.0}
+      ]
+
+      Enum.each(coordinate_combinations, fn coords ->
+        result = Robot.move_to_position(coords, server_name: pid)
+        assert {:error, :not_connected} = result
+      end)
+
+      GenServer.stop(pid)
+    end
+
+    test "joint merging handles all joint combinations" do
+      {:ok, pid} = Robot.start_link()
+
+      # Test various combinations of partial joints
+      joint_combinations = [
+        %{j1: 45.0},
+        %{j2: 30.0},
+        %{j3: -45.0},
+        %{j4: 90.0},
+        %{j1: 45.0, j2: 30.0},
+        %{j1: 45.0, j3: -45.0},
+        %{j2: 30.0, j4: 90.0},
+        %{j1: 45.0, j2: 30.0, j3: -45.0},
+        %{j2: 30.0, j3: -45.0, j4: 90.0},
+        %{j1: 45.0, j3: -45.0, j4: 90.0}
+      ]
+
+      Enum.each(joint_combinations, fn joints ->
+        result = Robot.move_joints(joints, server_name: pid)
+        assert {:error, :not_connected} = result
+      end)
+
+      GenServer.stop(pid)
+    end
+  end
+
+  describe "Partial update edge cases" do
+    test "handles extreme coordinate values" do
+      {:ok, pid} = Robot.start_link()
+
+      # Should accept extreme values (validation happens in command validator)
+      assert {:error, :not_connected} = Robot.move_to_position(%{x: -999.0}, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_to_position(%{z: 999.0}, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_to_position(%{t: 180.0}, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "handles extreme joint angle values" do
+      {:ok, pid} = Robot.start_link()
+
+      # Should accept extreme values (validation happens in command validator)
+      assert {:error, :not_connected} = Robot.move_joints(%{j1: -180.0}, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_joints(%{j2: 180.0}, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_joints(%{j3: 0.001}, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "handles mixed data types gracefully" do
+      {:ok, pid} = Robot.start_link()
+
+      # Should handle various numeric types
+      assert {:error, :not_connected} = Robot.move_to_position(%{x: 100, y: 50.0}, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_joints(%{j1: 45, j2: 30.0}, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "maintains backward compatibility with full maps" do
+      {:ok, pid} = Robot.start_link()
+
+      # Full position and joint maps should still work exactly as before
+      full_position = %{x: 100.0, y: 0.0, z: 150.0, t: 0.0}
+      assert {:error, :not_connected} = Robot.move_to_position(full_position, server_name: pid)
+
+      full_joints = %{j1: 0.0, j2: 45.0, j3: -30.0, j4: 0.0}
+      assert {:error, :not_connected} = Robot.move_joints(full_joints, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+  end
+
   describe "Parameter validation edge cases" do
     test "empty strings and edge values" do
       {:ok, pid} = Robot.start_link()

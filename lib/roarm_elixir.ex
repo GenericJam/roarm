@@ -31,11 +31,17 @@ defmodule Roarm do
       # Or override specific options
       {:ok, _pid} = Roarm.start_robot(port: "/dev/ttyUSB0", robot_type: :roarm_m3)
 
-      # Move to a position
+      # Move to a position (coordinates in mm, t in degrees)
       Roarm.Robot.move_to_position(%{x: 100.0, y: 0.0, z: 150.0, t: 0.0})
 
-      # Control joints
+      # Partial position update - only change Y coordinate
+      Roarm.Robot.move_to_position(%{y: 50.0})
+
+      # Control joints (all angles in degrees)
       Roarm.Robot.move_joints(%{j1: 0.0, j2: 45.0, j3: -30.0, j4: 0.0})
+
+      # Partial joint update - only move joint 1
+      Roarm.Robot.move_joints(%{j1: 90.0})
 
       # Set LED color
       Roarm.Robot.set_led(%{r: 255, g: 0, b: 0})

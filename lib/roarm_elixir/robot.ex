@@ -93,26 +93,61 @@ defmodule Roarm.Robot do
   @doc """
   Move the robot to a specific position.
 
-  ## Parameters
-    - `position` - Target position as %{x: float, y: float, z: float, t: float}
-    - `opts` - Optional parameters like speed or acceleration
+  Supports partial position updates - only specify the coordinates you want to change,
+  and the robot will maintain its current values for unspecified coordinates.
 
-  ## Example
+  ## Parameters
+    - `position` - Target position map with the following coordinates (all in mm except t):
+      - `:x` - X coordinate (-500.0 to 500.0 mm)
+      - `:y` - Y coordinate (-500.0 to 500.0 mm)
+      - `:z` - Z coordinate (0.0 to 500.0 mm)
+      - `:t` - Tool rotation angle (-180.0 to 180.0 degrees)
+               Represents the rotation angle of the EoAT (End of Arm Tooling)
+               Can be partial - e.g., %{y: 50.0} will only change Y coordinate
+    - `opts` - Optional parameters:
+      - `:speed` - Movement speed (1-4096, default: 1000)
+      - `:acceleration` - Movement acceleration (1-254, default: 100)
+      - `:timeout` - Command timeout in milliseconds (default: 8000)
+      - `:server_name` - Robot server name (default: __MODULE__)
+
+  ## Examples
+      # Move to complete position
       Roarm.Robot.move_to_position(%{x: 100.0, y: 0.0, z: 150.0, t: 0.0})
+
+      # Partial update - only change Y and Z, maintain current X and T
+      Roarm.Robot.move_to_position(%{y: 50.0, z: 200.0})
+
+      # Single coordinate update
+      Roarm.Robot.move_to_position(%{x: 75.0})
+
+      # With custom speed and acceleration
+      Roarm.Robot.move_to_position(%{x: 200.0, z: 300.0}, speed: 2000, acceleration: 150)
   """
+  @doc group: :movement
   def move_to_position(position, opts \\ []) do
     server = Keyword.get(opts, :server_name, __MODULE__)
     speed = Keyword.get(opts, :speed, 1000)
     acceleration = Keyword.get(opts, :acceleration, 100)
     timeout = Keyword.get(opts, :timeout, 8000)
 
+    # Get current position and merge with requested changes
+    target_position = case get_position(server_name: server) do
+      {:ok, current_position} ->
+        Map.merge(current_position, position)
+
+      {:error, _} ->
+        # If we can't get current position, use defaults for missing values
+        default_position = %{x: 0.0, y: 0.0, z: 100.0, t: 0.0}
+        Map.merge(default_position, position)
+    end
+
     # Build JSON command directly due to parameter name collision
     json_command = Jason.encode!(%{
       "T" => 1041,
-      "x" => Map.get(position, :x, 0.0),
-      "y" => Map.get(position, :y, 0.0),
-      "z" => Map.get(position, :z, 100.0),
-      "t" => Map.get(position, :t, 0.0),
+      "x" => target_position.x,
+      "y" => target_position.y,
+      "z" => target_position.z,
+      "t" => target_position.t,
       "spd" => max(1, min(speed, 4096)),      # Clamp speed
       "acc" => max(1, min(acceleration, 254))  # Clamp acceleration
     })
@@ -123,27 +158,62 @@ defmodule Roarm.Robot do
   @doc """
   Move individual joints to specific angles.
 
-  ## Parameters
-    - `joints` - Joint angles as %{j1: float, j2: float, j3: float, j4: float}
-    - `opts` - Optional parameters
+  Supports partial joint updates - only specify the joints you want to change,
+  and the robot will maintain its current values for unspecified joints.
 
-  ## Example
+  ## Parameters
+    - `joints` - Joint angles map with the following joints (all in degrees):
+      - `:j1` - Base joint (-180.0 to 180.0°) - controls rotation around vertical axis
+      - `:j2` - Shoulder joint (-180.0 to 180.0°) - controls arm lift/lower
+      - `:j3` - Elbow joint (-180.0 to 180.0°) - controls forearm angle
+      - `:j4` - Wrist joint (-180.0 to 180.0°) - controls end effector rotation
+      - `:j5` - Additional joint (-180.0 to 180.0°) - for extended robot models
+      - `:j6` - Additional joint (-180.0 to 180.0°) - for extended robot models
+                Can be partial - e.g., %{j1: 45.0} will only change joint 1
+    - `opts` - Optional parameters:
+      - `:speed` - Movement speed (1-4096, default: 1000)
+      - `:timeout` - Command timeout in milliseconds (default: from config)
+      - `:server_name` - Robot server name (default: __MODULE__)
+
+  ## Examples
+      # Move all primary joints
       Roarm.Robot.move_joints(%{j1: 0.0, j2: 45.0, j3: -30.0, j4: 0.0})
+
+      # Partial update - only change j1 and j3, maintain current j2 and j4
+      Roarm.Robot.move_joints(%{j1: 30.0, j3: -45.0})
+
+      # Single joint update
+      Roarm.Robot.move_joints(%{j2: 90.0})
+
+      # With custom speed
+      Roarm.Robot.move_joints(%{j1: 45.0, j4: -30.0}, speed: 2000)
   """
+  @doc group: :movement
   def move_joints(joints, opts \\ []) do
     server = Keyword.get(opts, :server_name, __MODULE__)
     speed = Keyword.get(opts, :speed, 1000)
     timeout = Keyword.get(opts, :timeout, Config.get_timeout())
 
+    # Get current joint angles and merge with requested changes
+    target_joints = case get_joints(server_name: server) do
+      {:ok, current_joints} ->
+        Map.merge(current_joints, joints)
+
+      {:error, _} ->
+        # If we can't get current joints, use defaults for missing values
+        default_joints = %{j1: 0.0, j2: 0.0, j3: 0.0, j4: 0.0, j5: 0.0, j6: 0.0}
+        Map.merge(default_joints, joints)
+    end
+
     # Convert from j1,j2,j3,j4 format to b,s,e,h format
     command = %{
       t: 122,
-      b: Map.get(joints, :j1, 0.0),
-      s: Map.get(joints, :j2, 0.0),
-      e: Map.get(joints, :j3, 0.0),
-      h: Map.get(joints, :j4, 0.0),
-      w: Map.get(joints, :j5, 0.0),
-      g: Map.get(joints, :j6, 0.0),
+      b: target_joints.j1,
+      s: target_joints.j2,
+      e: target_joints.j3,
+      h: target_joints.j4,
+      w: Map.get(target_joints, :j5, 0.0),
+      g: Map.get(target_joints, :j6, 0.0),
       spd: speed
     }
 
