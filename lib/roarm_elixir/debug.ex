@@ -6,30 +6,31 @@ defmodule Roarm.Debug do
   and test the robot connection step by step.
   """
 
-  alias Roarm.{Communication, Robot}
   require Logger
+  alias Roarm.Communication
+  alias Roarm.Robot
 
   @doc """
   Test raw serial communication without high-level protocols.
   """
   def test_raw_serial(port, opts \\ []) do
-    IO.puts("Testing raw serial communication on #{port}")
+    Logger.info("Testing raw serial communication on #{port}")
 
     case Communication.start_link() do
       {:ok, _pid} ->
         case Communication.connect(port, opts) do
           :ok ->
-            IO.puts("✓ Serial connection established")
+            Logger.info("✓ Serial connection established")
             run_raw_tests()
             Communication.disconnect()
 
           {:error, reason} ->
-            IO.puts("✗ Serial connection failed: #{inspect(reason)}")
+            Logger.info("✗ Serial connection failed: #{inspect(reason)}")
             {:error, reason}
         end
 
       {:error, reason} ->
-        IO.puts("✗ Failed to start communication process: #{inspect(reason)}")
+        Logger.info("✗ Failed to start communication process: #{inspect(reason)}")
         {:error, reason}
     end
   end
@@ -38,8 +39,8 @@ defmodule Roarm.Debug do
   Test individual RoArm commands step by step.
   """
   def test_commands(port, opts \\ []) do
-    IO.puts("Testing RoArm commands on #{port}")
-    IO.puts("Enable debug logging with: Logger.configure(level: :debug)")
+    Logger.info("Testing RoArm commands on #{port}")
+    Logger.info("Enable debug logging with: Logger.configure(level: :debug)")
 
     robot_opts = Keyword.merge([port: port], opts)
 
@@ -47,17 +48,17 @@ defmodule Roarm.Debug do
       {:ok, _pid} ->
         case Robot.connect() do
           :ok ->
-            IO.puts("✓ Robot connection established")
+            Logger.info("✓ Robot connection established")
             run_command_tests()
             Robot.disconnect()
 
           {:error, reason} ->
-            IO.puts("✗ Robot connection failed: #{inspect(reason)}")
+            Logger.info("✗ Robot connection failed: #{inspect(reason)}")
             {:error, reason}
         end
 
       {:error, reason} ->
-        IO.puts("✗ Failed to start robot process: #{inspect(reason)}")
+        Logger.info("✗ Failed to start robot process: #{inspect(reason)}")
         {:error, reason}
     end
   end
@@ -66,24 +67,24 @@ defmodule Roarm.Debug do
   Monitor serial communication in real-time.
   """
   def monitor_serial(port, opts \\ []) do
-    IO.puts("Starting serial monitor on #{port}")
-    IO.puts("Press Ctrl+C to stop")
+    Logger.info("Starting serial monitor on #{port}")
+    Logger.info("Press Ctrl+C to stop")
 
     case Communication.start_link() do
       {:ok, _pid} ->
         case Communication.connect(port, opts) do
           :ok ->
-            IO.puts("✓ Connected. Type commands (JSON format) or 'quit' to exit:")
+            Logger.info("✓ Connected. Type commands (JSON format) or 'quit' to exit:")
             monitor_loop()
             Communication.disconnect()
 
           {:error, reason} ->
-            IO.puts("✗ Connection failed: #{inspect(reason)}")
+            Logger.info("✗ Connection failed: #{inspect(reason)}")
             {:error, reason}
         end
 
       {:error, reason} ->
-        IO.puts("✗ Failed to start: #{inspect(reason)}")
+        Logger.info("✗ Failed to start: #{inspect(reason)}")
         {:error, reason}
     end
   end
@@ -92,55 +93,55 @@ defmodule Roarm.Debug do
   Test hardware initialization sequence.
   """
   def test_initialization(port, opts \\ []) do
-    IO.puts("Testing RoArm initialization sequence on #{port}")
+    Logger.info("Testing RoArm initialization sequence on #{port}")
 
     case Communication.start_link() do
       {:ok, _pid} ->
         case Communication.connect(port, opts) do
           :ok ->
-            IO.puts("✓ Serial connection established")
+            Logger.info("✓ Serial connection established")
 
             # Step 1: Send initialization command
-            IO.puts("\nStep 1: Sending initialization command (T:100)")
+            Logger.info("\nStep 1: Sending initialization command (T:100)")
             init_cmd = Jason.encode!(%{"T" => 100})
 
             case Communication.send_command(init_cmd, 5000) do
               {:ok, response} ->
-                IO.puts("✓ Initialization response: #{response}")
+                Logger.info("✓ Initialization response: #{response}")
 
                 # Step 2: Wait for robot to settle
-                IO.puts("\nStep 2: Waiting for robot to initialize...")
+                Logger.info("\nStep 2: Waiting for robot to initialize...")
                 :timer.sleep(3000)
 
                 # Step 3: Request status
-                IO.puts("\nStep 3: Requesting robot status (T:105)")
+                Logger.info("\nStep 3: Requesting robot status (T:105)")
                 status_cmd = Jason.encode!(%{"T" => 105})
 
                 case Communication.send_command(status_cmd, 2000) do
                   {:ok, status_response} ->
-                    IO.puts("✓ Status response: #{status_response}")
+                    Logger.info("✓ Status response: #{status_response}")
 
                     # Step 4: Test simple movement
-                    IO.puts("\nStep 4: Testing simple joint movement")
+                    Logger.info("\nStep 4: Testing simple joint movement")
                     test_simple_movement()
 
                   {:error, reason} ->
-                    IO.puts("✗ Status request failed: #{inspect(reason)}")
+                    Logger.info("✗ Status request failed: #{inspect(reason)}")
                 end
 
               {:error, reason} ->
-                IO.puts("✗ Initialization failed: #{inspect(reason)}")
+                Logger.info("✗ Initialization failed: #{inspect(reason)}")
             end
 
             Communication.disconnect()
 
           {:error, reason} ->
-            IO.puts("✗ Connection failed: #{inspect(reason)}")
+            Logger.info("✗ Connection failed: #{inspect(reason)}")
             {:error, reason}
         end
 
       {:error, reason} ->
-        IO.puts("✗ Failed to start: #{inspect(reason)}")
+        Logger.info("✗ Failed to start: #{inspect(reason)}")
         {:error, reason}
     end
   end
@@ -148,7 +149,7 @@ defmodule Roarm.Debug do
   # Private functions
 
   defp run_raw_tests do
-    IO.puts("\n--- Raw Serial Tests ---")
+    Logger.info("\n--- Raw Serial Tests ---")
 
     # Test basic communication
     test_commands = [
@@ -159,21 +160,21 @@ defmodule Roarm.Debug do
     ]
 
     Enum.each(test_commands, fn cmd ->
-      IO.puts("Sending: #{cmd}")
+      Logger.info("Sending: #{cmd}")
 
       case Communication.send_raw(cmd <> "\n") do
         :ok ->
-          IO.puts("✓ Command sent")
+          Logger.info("✓ Command sent")
           :timer.sleep(1000)  # Wait for response
 
         {:error, reason} ->
-          IO.puts("✗ Send failed: #{inspect(reason)}")
+          Logger.info("✗ Send failed: #{inspect(reason)}")
       end
     end)
   end
 
   defp run_command_tests do
-    IO.puts("\n--- RoArm Command Tests ---")
+    Logger.info("\n--- RoArm Command Tests ---")
 
     tests = [
       {"Initialize (Home)", fn -> Robot.home() end},
@@ -189,15 +190,15 @@ defmodule Roarm.Debug do
     ]
 
     Enum.each(tests, fn {name, test_fn} ->
-      IO.puts("Testing: #{name}")
+      Logger.info("Testing: #{name}")
 
       case test_fn.() do
         {:ok, response} ->
-          IO.puts("✓ Success: #{inspect(response)}")
+          Logger.info("✓ Success: #{inspect(response)}")
           :timer.sleep(2000)  # Wait between commands
 
         {:error, reason} ->
-          IO.puts("✗ Failed: #{inspect(reason)}")
+          Logger.info("✗ Failed: #{inspect(reason)}")
       end
     end)
   end
@@ -207,7 +208,7 @@ defmodule Roarm.Debug do
 
     case input do
       "quit" ->
-        IO.puts("Exiting monitor")
+        Logger.info("Exiting monitor")
 
       "" ->
         monitor_loop()
@@ -215,10 +216,10 @@ defmodule Roarm.Debug do
       command ->
         case Communication.send_command(command) do
           {:ok, response} ->
-            IO.puts("Response: #{response}")
+            Logger.info("Response: #{response}")
 
           {:error, reason} ->
-            IO.puts("Error: #{inspect(reason)}")
+            Logger.info("Error: #{inspect(reason)}")
         end
 
         monitor_loop()
@@ -239,7 +240,7 @@ defmodule Roarm.Debug do
 
     case Communication.send_command(move_cmd, 3000) do
       {:ok, response} ->
-        IO.puts("✓ Movement response: #{response}")
+        Logger.info("✓ Movement response: #{response}")
         :timer.sleep(2000)
 
         # Return to zero
@@ -251,14 +252,14 @@ defmodule Roarm.Debug do
 
         case Communication.send_command(return_cmd, 3000) do
           {:ok, return_response} ->
-            IO.puts("✓ Return movement response: #{return_response}")
+            Logger.info("✓ Return movement response: #{return_response}")
 
           {:error, reason} ->
-            IO.puts("✗ Return movement failed: #{inspect(reason)}")
+            Logger.info("✗ Return movement failed: #{inspect(reason)}")
         end
 
       {:error, reason} ->
-        IO.puts("✗ Movement failed: #{inspect(reason)}")
+        Logger.info("✗ Movement failed: #{inspect(reason)}")
     end
   end
 end

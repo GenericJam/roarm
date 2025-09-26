@@ -1,26 +1,27 @@
 #!/usr/bin/env elixir
 
-# Basic usage example for RoarmElixir
+# Basic usage example for Roarm
 # Run with: elixir examples/basic_usage.exs
 
 Mix.install([
-  {:roarm_elixir, path: "."}
+  {:roarm, path: "."}
 ])
 
 defmodule BasicUsage do
   @moduledoc """
-  Basic usage examples for the RoarmElixir library.
+  Basic usage examples for the Roarm library.
   """
+  require Logger
 
   def run do
-    IO.puts("RoarmElixir Basic Usage Example")
-    IO.puts("=" * 40)
+    Logger.info("Roarm Basic Usage Example")
+    Logger.info("=" * 40)
 
     # List available ports
-    IO.puts("\n1. Available serial ports:")
-    ports = RoarmElixir.list_ports()
+    Logger.info("\n1. Available serial ports:")
+    ports = Roarm.list_ports()
     Enum.each(ports, fn {port, info} ->
-      IO.puts("   #{port}: #{inspect(info)}")
+      Logger.info("   #{port}: #{inspect(info)}")
     end)
 
     # Get port from user or use default
@@ -28,17 +29,17 @@ defmodule BasicUsage do
 
     if port do
       # Test connection
-      IO.puts("\n2. Testing connection...")
+      Logger.info("\n2. Testing connection...")
       test_connection(port)
 
       # Demonstrate robot control
-      IO.puts("\n3. Robot control demonstration...")
+      Logger.info("\n3. Robot control demonstration...")
       robot_demo(port)
     else
-      IO.puts("\nSkipping robot demonstrations (no port specified)")
+      Logger.info("\nSkipping robot demonstrations (no port specified)")
     end
 
-    IO.puts("\nExample completed!")
+    Logger.info("\nExample completed!")
   end
 
   defp get_port_input do
@@ -52,14 +53,14 @@ defmodule BasicUsage do
   end
 
   defp test_connection(port) do
-    case RoarmElixir.test_connection(port) do
+    case Roarm.test_connection(port) do
       {:ok, position} ->
-        IO.puts("✓ Connection successful!")
-        IO.puts("  Current position: #{inspect(position)}")
+        Logger.info("✓ Connection successful!")
+        Logger.info("  Current position: #{inspect(position)}")
         true
 
       {:error, reason} ->
-        IO.puts("✗ Connection failed: #{inspect(reason)}")
+        Logger.info("✗ Connection failed: #{inspect(reason)}")
         false
     end
   end
@@ -71,9 +72,9 @@ defmodule BasicUsage do
       baudrate: 115200
     ]
 
-    case RoarmElixir.start_robot(robot_opts) do
+    case Roarm.start_robot(robot_opts) do
       {:ok, _pid} ->
-        IO.puts("✓ Robot started successfully")
+        Logger.info("✓ Robot started successfully")
 
         # Demonstrate basic movements
         demonstrate_positions()
@@ -81,16 +82,16 @@ defmodule BasicUsage do
         demonstrate_features()
 
         # Cleanup
-        RoarmElixir.Robot.disconnect()
-        IO.puts("✓ Robot disconnected")
+        Roarm.Robot.disconnect()
+        Logger.info("✓ Robot disconnected")
 
       {:error, reason} ->
-        IO.puts("✗ Failed to start robot: #{inspect(reason)}")
+        Logger.info("✗ Failed to start robot: #{inspect(reason)}")
     end
   end
 
   defp demonstrate_positions do
-    IO.puts("\n--- Position Control ---")
+    Logger.info("\n--- Position Control ---")
 
     positions = [
       %{x: 100.0, y: 0.0, z: 150.0, t: 0.0},
@@ -99,28 +100,28 @@ defmodule BasicUsage do
     ]
 
     Enum.each(positions, fn pos ->
-      IO.puts("Moving to: #{inspect(pos)}")
+      Logger.info("Moving to: #{inspect(pos)}")
 
-      case RoarmElixir.Robot.move_to_position(pos) do
+      case Roarm.Robot.move_to_position(pos) do
         {:ok, _} ->
-          IO.puts("✓ Command sent successfully")
+          Logger.info("✓ Command sent successfully")
           :timer.sleep(1000)
 
         {:error, reason} ->
-          IO.puts("✗ Move failed: #{inspect(reason)}")
+          Logger.info("✗ Move failed: #{inspect(reason)}")
       end
     end)
 
     # Return home
-    IO.puts("Returning to home position...")
-    case RoarmElixir.Robot.home() do
-      {:ok, _} -> IO.puts("✓ Homed successfully")
-      {:error, reason} -> IO.puts("✗ Home failed: #{inspect(reason)}")
+    Logger.info("Returning to home position...")
+    case Roarm.Robot.home() do
+      {:ok, _} -> Logger.info("✓ Homed successfully")
+      {:error, reason} -> Logger.info("✗ Home failed: #{inspect(reason)}")
     end
   end
 
   defp demonstrate_joints do
-    IO.puts("\n--- Joint Control ---")
+    Logger.info("\n--- Joint Control ---")
 
     joint_configs = [
       %{j1: 0.0, j2: 0.0, j3: 0.0, j4: 0.0},
@@ -129,24 +130,24 @@ defmodule BasicUsage do
     ]
 
     Enum.each(joint_configs, fn joints ->
-      IO.puts("Moving joints to: #{inspect(joints)}")
+      Logger.info("Moving joints to: #{inspect(joints)}")
 
-      case RoarmElixir.Robot.move_joints(joints) do
+      case Roarm.Robot.move_joints(joints) do
         {:ok, _} ->
-          IO.puts("✓ Joint command sent")
+          Logger.info("✓ Joint command sent")
           :timer.sleep(1000)
 
         {:error, reason} ->
-          IO.puts("✗ Joint move failed: #{inspect(reason)}")
+          Logger.info("✗ Joint move failed: #{inspect(reason)}")
       end
     end)
   end
 
   defp demonstrate_features do
-    IO.puts("\n--- Hardware Features ---")
+    Logger.info("\n--- Hardware Features ---")
 
     # LED demonstration
-    IO.puts("Testing LED colors...")
+    Logger.info("Testing LED colors...")
     colors = [
       {%{r: 255, g: 0, b: 0}, "Red"},
       {%{r: 0, g: 255, b: 0}, "Green"},
@@ -155,46 +156,46 @@ defmodule BasicUsage do
     ]
 
     Enum.each(colors, fn {color, name} ->
-      IO.puts("  Setting LED to #{name}")
+      Logger.info("  Setting LED to #{name}")
 
-      case RoarmElixir.Robot.set_led(color) do
+      case Roarm.Robot.set_led(color) do
         {:ok, _} -> :timer.sleep(500)
-        {:error, reason} -> IO.puts("    ✗ LED failed: #{inspect(reason)}")
+        {:error, reason} -> Logger.info("    ✗ LED failed: #{inspect(reason)}")
       end
     end)
 
     # Torque lock demonstration
-    IO.puts("Testing torque lock...")
-    case RoarmElixir.Robot.set_torque_lock(true) do
+    Logger.info("Testing torque lock...")
+    case Roarm.Robot.set_torque_lock(true) do
       {:ok, _} ->
-        IO.puts("  ✓ Torque lock enabled")
+        Logger.info("  ✓ Torque lock enabled")
         :timer.sleep(1000)
 
-        case RoarmElixir.Robot.set_torque_lock(false) do
-          {:ok, _} -> IO.puts("  ✓ Torque lock disabled")
-          {:error, reason} -> IO.puts("  ✗ Torque unlock failed: #{inspect(reason)}")
+        case Roarm.Robot.set_torque_lock(false) do
+          {:ok, _} -> Logger.info("  ✓ Torque lock disabled")
+          {:error, reason} -> Logger.info("  ✗ Torque unlock failed: #{inspect(reason)}")
         end
 
       {:error, reason} ->
-        IO.puts("  ✗ Torque lock failed: #{inspect(reason)}")
+        Logger.info("  ✗ Torque lock failed: #{inspect(reason)}")
     end
 
     # Status queries
-    IO.puts("Querying robot status...")
-    case RoarmElixir.Robot.get_position() do
+    Logger.info("Querying robot status...")
+    case Roarm.Robot.get_position() do
       {:ok, position} ->
-        IO.puts("  Current position: #{inspect(position)}")
+        Logger.info("  Current position: #{inspect(position)}")
 
       {:error, reason} ->
-        IO.puts("  ✗ Get position failed: #{inspect(reason)}")
+        Logger.info("  ✗ Get position failed: #{inspect(reason)}")
     end
 
-    case RoarmElixir.Robot.get_joints() do
+    case Roarm.Robot.get_joints() do
       {:ok, joints} ->
-        IO.puts("  Current joints: #{inspect(joints)}")
+        Logger.info("  Current joints: #{inspect(joints)}")
 
       {:error, reason} ->
-        IO.puts("  ✗ Get joints failed: #{inspect(reason)}")
+        Logger.info("  ✗ Get joints failed: #{inspect(reason)}")
     end
   end
 end

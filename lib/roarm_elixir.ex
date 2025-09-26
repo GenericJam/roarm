@@ -14,20 +14,22 @@ defmodule Roarm do
   - Concurrent robot control using GenServer
   - Support for multiple RoArm models
 
+  ## Configuration
+
+  Configure Roarm in your `config.exs`:
+
+      config :roarm,
+        port: "/dev/cu.usbserial-110",
+        baudrate: 115200,
+        robot_type: :roarm_m2
+
   ## Quick Start
 
-      # Start the communication process
-      {:ok, _} = Roarm.Communication.start_link()
+      # With configuration - just start the robot
+      {:ok, _pid} = Roarm.start_robot()
 
-      # Start a robot controller
-      {:ok, _} = Roarm.Robot.start_link(
-        robot_type: :roarm_m2,
-        port: "/dev/ttyUSB0",
-        baudrate: 115200
-      )
-
-      # Connect to the robot
-      :ok = Roarm.Robot.connect()
+      # Or override specific options
+      {:ok, _pid} = Roarm.start_robot(port: "/dev/ttyUSB0", robot_type: :roarm_m3)
 
       # Move to a position
       Roarm.Robot.move_to_position(%{x: 100.0, y: 0.0, z: 150.0, t: 0.0})
@@ -42,11 +44,14 @@ defmodule Roarm do
 
   - `Roarm.Communication` - Low-level UART communication
   - `Roarm.Robot` - High-level robot control
+  - `Roarm.Config` - Configuration management
   - `Roarm.Demo` - Demo and testing utilities
   - `Roarm.Debug` - Debug and troubleshooting tools
   """
 
-  alias Roarm.{Communication, Robot}
+  alias Roarm.Communication
+  alias Roarm.Config
+  alias Roarm.Robot
 
   @registry_name Roarm.Registry
 
@@ -65,11 +70,21 @@ defmodule Roarm do
   @doc """
   Convenience function to start a robot with given configuration.
 
-  ## Parameters
-    - `opts` - Configuration options including :robot_type, :port, :baudrate
+  Uses application configuration as defaults, with provided options taking precedence.
 
-  ## Example
-      Roarm.start_robot(robot_type: :roarm_m2, port: "/dev/ttyUSB0")
+  ## Parameters
+    - `opts` - Configuration options (overrides config.exs values)
+      - `:robot_type` - Type of robot (:roarm_m2, :roarm_m2_pro, :roarm_m3, :roarm_m3_pro)
+      - `:port` - Serial port path
+      - `:baudrate` - Communication speed (default: 115200)
+      - `:name` - Process name for registry
+
+  ## Examples
+      # Using configuration from config.exs
+      Roarm.start_robot()
+
+      # Override specific options
+      Roarm.start_robot(port: "/dev/ttyUSB1", robot_type: :roarm_m3)
   """
   def start_robot(opts \\ []) do
     # Ensure registry is started
@@ -79,12 +94,25 @@ defmodule Roarm do
       error -> error
     end
 
-    # Set default name if none provided
-    name = Keyword.get(opts, :name, Robot)
-    opts_with_name = Keyword.put(opts, :name, name)
+    # Merge configuration with provided options
+    config_opts = [
+      robot_type: Config.get_robot_type(),
+      port: Config.get(:port),
+      baudrate: Config.get_baudrate(),
+      name: Config.get_robot_server_name()
+    ]
+    merged_opts = Keyword.merge(config_opts, opts)
 
-    with {:ok, _comm_pid} <- Communication.start_link(),
-         {:ok, robot_pid} <- Robot.start_link(opts_with_name),
+    # Extract values
+    name = Keyword.get(merged_opts, :name, Robot)
+    comm_name = Config.get_communication_server_name()
+
+    # Prepare options for robot
+    robot_opts = Keyword.put(merged_opts, :name, name)
+    comm_opts = [name: comm_name]
+
+    with {:ok, _comm_pid} <- Communication.start_link(comm_opts),
+         {:ok, robot_pid} <- Robot.start_link(robot_opts),
          :ok <- Robot.connect(server_name: name) do
       {:ok, robot_pid}
     else

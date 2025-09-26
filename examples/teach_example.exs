@@ -1,22 +1,23 @@
 #!/usr/bin/env elixir
 
-# Teaching functionality example for RoarmElixir
+# Teaching functionality example for Roarm
 # Run with: elixir examples/teach_example.exs
 
 Mix.install([
-  {:roarm_elixir, path: "."}
+  {:roarm, path: "."}
 ])
 
 defmodule TeachExample do
   @moduledoc """
-  Examples demonstrating the teaching functionality of RoarmElixir.
+  Examples demonstrating the teaching functionality of Roarm.
   """
-
-  alias RoarmElixir.{Robot, Demo}
+  require Logger
+  alias Roarm.Demo
+  alias Roarm.Robot
 
   def run do
-    IO.puts("RoarmElixir Teaching Examples")
-    IO.puts("=" * 40)
+    Logger.info("Roarm Teaching Examples")
+    Logger.info("=" * 40)
 
     # Get port from user
     port = get_port_input()
@@ -28,10 +29,10 @@ defmodule TeachExample do
           Robot.disconnect()
 
         {:error, reason} ->
-          IO.puts("Failed to connect: #{inspect(reason)}")
+          Logger.info("Failed to connect: #{inspect(reason)}")
       end
     else
-      IO.puts("No port specified - showing teaching concepts only")
+      Logger.info("No port specified - showing teaching concepts only")
       show_teaching_concepts()
     end
   end
@@ -47,9 +48,9 @@ defmodule TeachExample do
   end
 
   defp connect_robot(port) do
-    case RoarmElixir.start_robot(port: port, robot_type: :roarm_m2) do
+    case Roarm.start_robot(port: port, robot_type: :roarm_m2) do
       {:ok, _pid} ->
-        IO.puts("✓ Robot connected successfully")
+        Logger.info("✓ Robot connected successfully")
         :ok
 
       {:error, reason} ->
@@ -58,12 +59,12 @@ defmodule TeachExample do
   end
 
   defp show_teaching_menu do
-    IO.puts("\nTeaching Examples:")
-    IO.puts("1. Basic drag teach example")
-    IO.puts("2. Mission recording example")
-    IO.puts("3. Torque control example")
-    IO.puts("4. Interactive teaching session")
-    IO.puts("5. Run demo suite")
+    Logger.info("\nTeaching Examples:")
+    Logger.info("1. Basic drag teach example")
+    Logger.info("2. Mission recording example")
+    Logger.info("3. Torque control example")
+    Logger.info("4. Interactive teaching session")
+    Logger.info("5. Run demo suite")
 
     choice = IO.gets("Select example (1-5): ") |> String.trim()
 
@@ -73,72 +74,72 @@ defmodule TeachExample do
       "3" -> torque_control_example()
       "4" -> Demo.interactive_teaching()
       "5" -> Demo.teaching_demo()
-      _ -> IO.puts("Invalid selection")
+      _ -> Logger.info("Invalid selection")
     end
   end
 
   defp basic_drag_teach do
-    IO.puts("\n=== Basic Drag Teach Example ===")
+    Logger.info("\n=== Basic Drag Teach Example ===")
 
     filename = "example_movement.json"
 
-    IO.puts("This example will:")
-    IO.puts("1. Disable robot torque so you can move it manually")
-    IO.puts("2. Record your movements for 10 seconds")
-    IO.puts("3. Re-enable torque and replay the movement")
+    Logger.info("This example will:")
+    Logger.info("1. Disable robot torque so you can move it manually")
+    Logger.info("2. Record your movements for 10 seconds")
+    Logger.info("3. Re-enable torque and replay the movement")
 
     if confirm("Continue? (y/n): ") do
       # Start teaching
       case Robot.drag_teach_start(filename, sample_rate: 50) do
         :ok ->
-          IO.puts("✓ Drag teach started!")
-          IO.puts("  Torque is now disabled - manually move the robot arm")
-          IO.puts("  Recording will stop automatically in 10 seconds...")
+          Logger.info("✓ Drag teach started!")
+          Logger.info("  Torque is now disabled - manually move the robot arm")
+          Logger.info("  Recording will stop automatically in 10 seconds...")
 
           # Record for 10 seconds
           :timer.sleep(10_000)
 
           case Robot.drag_teach_stop() do
             {:ok, sample_count} ->
-              IO.puts("✓ Recording complete! Captured #{sample_count} samples")
+              Logger.info("✓ Recording complete! Captured #{sample_count} samples")
 
               if confirm("Replay the movement? (y/n): ") do
-                IO.puts("Replaying movement...")
+                Logger.info("Replaying movement...")
 
                 case Robot.drag_teach_replay(filename) do
                   :ok ->
-                    IO.puts("✓ Replay completed")
+                    Logger.info("✓ Replay completed")
                   {:error, reason} ->
-                    IO.puts("✗ Replay failed: #{inspect(reason)}")
+                    Logger.info("✗ Replay failed: #{inspect(reason)}")
                 end
               end
 
             {:error, reason} ->
-              IO.puts("✗ Failed to stop recording: #{inspect(reason)}")
+              Logger.info("✗ Failed to stop recording: #{inspect(reason)}")
           end
 
         {:error, reason} ->
-          IO.puts("✗ Failed to start drag teach: #{inspect(reason)}")
+          Logger.info("✗ Failed to start drag teach: #{inspect(reason)}")
       end
     end
   end
 
   defp mission_example do
-    IO.puts("\n=== Mission Recording Example ===")
+    Logger.info("\n=== Mission Recording Example ===")
 
     mission_name = "elixir_example"
 
-    IO.puts("This example will:")
-    IO.puts("1. Create a mission named '#{mission_name}'")
-    IO.puts("2. Move through several positions and record them")
-    IO.puts("3. Add delays between movements")
-    IO.puts("4. Play back the entire sequence")
+    Logger.info("This example will:")
+    Logger.info("1. Create a mission named '#{mission_name}'")
+    Logger.info("2. Move through several positions and record them")
+    Logger.info("3. Add delays between movements")
+    Logger.info("4. Play back the entire sequence")
 
     if confirm("Continue? (y/n): ") do
       # Create mission
       case Robot.create_mission(mission_name, "Example mission from Elixir") do
         {:ok, _} ->
-          IO.puts("✓ Mission created")
+          Logger.info("✓ Mission created")
 
           # Define a sequence of movements
           movements = [
@@ -151,7 +152,7 @@ defmodule TeachExample do
 
           # Execute and record each movement
           Enum.each(movements, fn {position, description} ->
-            IO.puts("Moving to: #{description}")
+            Logger.info("Moving to: #{description}")
 
             case Robot.move_joints(position) do
               {:ok, _} ->
@@ -159,81 +160,81 @@ defmodule TeachExample do
 
                 case Robot.add_mission_step(mission_name, 0.3) do
                   {:ok, _} ->
-                    IO.puts("✓ Recorded step")
+                    Logger.info("✓ Recorded step")
 
                   {:error, reason} ->
-                    IO.puts("✗ Failed to record: #{inspect(reason)}")
+                    Logger.info("✗ Failed to record: #{inspect(reason)}")
                 end
 
               {:error, reason} ->
-                IO.puts("✗ Movement failed: #{inspect(reason)}")
+                Logger.info("✗ Movement failed: #{inspect(reason)}")
             end
           end)
 
           # Add a pause in the sequence
           case Robot.add_mission_delay(mission_name, 3000) do
             {:ok, _} ->
-              IO.puts("✓ Added 3-second pause")
+              Logger.info("✓ Added 3-second pause")
 
             {:error, reason} ->
-              IO.puts("✗ Failed to add delay: #{inspect(reason)}")
+              Logger.info("✗ Failed to add delay: #{inspect(reason)}")
           end
 
           if confirm("Play the mission? (y/n): ") do
             case Robot.play_mission(mission_name, 2) do
               {:ok, _} ->
-                IO.puts("✓ Mission playback started (will repeat 2 times)")
+                Logger.info("✓ Mission playback started (will repeat 2 times)")
 
               {:error, reason} ->
-                IO.puts("✗ Playback failed: #{inspect(reason)}")
+                Logger.info("✗ Playback failed: #{inspect(reason)}")
             end
           end
 
         {:error, reason} ->
-          IO.puts("✗ Failed to create mission: #{inspect(reason)}")
+          Logger.info("✗ Failed to create mission: #{inspect(reason)}")
       end
     end
   end
 
   defp torque_control_example do
-    IO.puts("\n=== Torque Control Example ===")
+    Logger.info("\n=== Torque Control Example ===")
 
-    IO.puts("This example demonstrates torque control:")
-    IO.puts("- Torque enabled = joints locked, robot holds position")
-    IO.puts("- Torque disabled = joints free, you can move robot manually")
+    Logger.info("This example demonstrates torque control:")
+    Logger.info("- Torque enabled = joints locked, robot holds position")
+    Logger.info("- Torque disabled = joints free, you can move robot manually")
 
     if confirm("Continue? (y/n): ") do
-      IO.puts("\nStep 1: Disabling torque...")
+      Logger.info("\nStep 1: Disabling torque...")
 
       case Robot.set_torque_enabled(false) do
         {:ok, _} ->
-          IO.puts("✓ Torque disabled")
-          IO.puts("  Try gently moving the robot arm - it should move freely")
+          Logger.info("✓ Torque disabled")
+          Logger.info("  Try gently moving the robot arm - it should move freely")
           IO.gets("Press Enter when you've tried moving it...")
 
-          IO.puts("\nStep 2: Re-enabling torque...")
+          Logger.info("\nStep 2: Re-enabling torque...")
 
           case Robot.set_torque_enabled(true) do
             {:ok, _} ->
-              IO.puts("✓ Torque re-enabled")
-              IO.puts("  The robot should now hold its current position firmly")
+              Logger.info("✓ Torque re-enabled")
+              Logger.info("  The robot should now hold its current position firmly")
 
             {:error, reason} ->
-              IO.puts("✗ Failed to re-enable torque: #{inspect(reason)}")
+              Logger.info("✗ Failed to re-enable torque: #{inspect(reason)}")
           end
 
         {:error, reason} ->
-          IO.puts("✗ Failed to disable torque: #{inspect(reason)}")
+          Logger.info("✗ Failed to disable torque: #{inspect(reason)}")
       end
     end
   end
 
   defp show_teaching_concepts do
-    IO.puts("\n=== Teaching Functionality Overview ===")
+    Logger.info("\n=== Teaching Functionality Overview ===")
 
-    IO.puts("""
+    Logger.info("""
 
-    The RoarmElixir library includes two main teaching approaches:
+    The Roarm library includes two main teaching approaches:
 
     ## 1. Drag Teach (Continuous Recording)
     - `Robot.drag_teach_start(filename)` - Start recording
@@ -255,7 +256,7 @@ defmodule TeachExample do
     ## Example Usage:
     ```elixir
     # Connect to robot
-    {:ok, _} = RoarmElixir.start_robot(port: "/dev/cu.usbserial-110")
+    {:ok, _} = Roarm.start_robot(port: "/dev/cu.usbserial-110")
 
     # Drag teach example
     Robot.drag_teach_start("my_movement.json")

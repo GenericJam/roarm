@@ -21,27 +21,49 @@ def deps do
 end
 ```
 
-## Quick Start
+## Configuration
 
-### 1. Start the Application
+Configure Roarm in your `config/config.exs` file:
 
 ```elixir
-# Start the registry and communication systems
-{:ok, _} = Roarm.start_registry()
-{:ok, _} = Roarm.Communication.start_link()
+config :roarm,
+  port: "/dev/cu.usbserial-110",
+  baudrate: 115200,
+  robot_type: :roarm_m2,
+  timeout: 5000
 ```
 
-### 2. Connect to Your Robot
+Available configuration options:
+- `:port` - Serial port path (e.g., "/dev/ttyUSB0", "/dev/cu.usbserial-110")
+- `:baudrate` - Communication speed (default: 115200)
+- `:robot_type` - Type of robot (:roarm_m2, :roarm_m2_pro, :roarm_m3, :roarm_m3_pro)
+- `:communication_server_name` - Name for communication server (default: Roarm.Communication)
+- `:robot_server_name` - Name for robot server (default: Roarm.Robot)
+- `:timeout` - Default timeout for operations in milliseconds (default: 5000)
+
+## Quick Start
+
+### 1. Using Configuration (Recommended)
 
 ```elixir
-# Start a robot controller
-{:ok, pid} = Roarm.Robot.start_link([
-  robot_type: :roarm_m2,           # or :roarm_m2_pro, :roarm_m3, :roarm_m3_pro
-  port: "/dev/cu.usbserial-110"    # Your robot's serial port
+# With configuration - just start the robot
+{:ok, _pid} = Roarm.start_robot()
+
+# Robot is automatically connected and ready to use
+Roarm.Robot.move_to_position(%{x: 100.0, y: 0.0, z: 150.0, t: 0.0})
+```
+
+### 2. Manual Setup (Advanced)
+
+```elixir
+# Start a robot controller with specific options (overrides config)
+{:ok, pid} = Roarm.start_robot([
+  robot_type: :roarm_m3,           # Override config robot type
+  port: "/dev/ttyUSB0"            # Override config port
 ])
 
-# Connect to the robot
-:ok = Roarm.Robot.connect()
+# Robot is automatically connected
+Roarm.Robot.home()
 ```
 
 ### 3. Basic Movement
@@ -109,13 +131,13 @@ Always handle errors when working with hardware:
 ```elixir
 case Roarm.Robot.move_joints(%{j1: 45.0, j2: 30.0}) do
   {:ok, response} ->
-    IO.puts("Movement successful: #{response}")
+    Logger.info("Movement successful: #{response}")
 
   {:error, :not_connected} ->
-    IO.puts("Robot is not connected")
+    Logger.info("Robot is not connected")
 
   {:error, reason} ->
-    IO.puts("Error: #{inspect(reason)}")
+    Logger.info("Error: #{inspect(reason)}")
 end
 ```
 

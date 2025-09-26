@@ -7,8 +7,9 @@ defmodule Roarm.Robot do
   """
 
   use GenServer
-  alias Roarm.Communication
   require Logger
+  alias Roarm.Communication
+  alias Roarm.Config
 
   @type robot_type :: :roarm_m2 | :roarm_m2_pro | :roarm_m3 | :roarm_m3_pro
 
@@ -38,9 +39,9 @@ defmodule Roarm.Robot do
   Start a new robot control process.
 
   ## Options
-    - `:robot_type` - Type of robot (:roarm_m2, :roarm_m2_pro, etc.)
-    - `:port` - Serial port path
-    - `:baudrate` - Communication speed (default: 115200)
+    - `:robot_type` - Type of robot (default: from config or :roarm_m2)
+    - `:port` - Serial port path (default: from config)
+    - `:baudrate` - Communication speed (default: from config or 115200)
   """
   def start_link(opts \\ []) do
     name = Keyword.get(opts, :name, __MODULE__)
@@ -132,7 +133,7 @@ defmodule Roarm.Robot do
   def move_joints(joints, opts \\ []) do
     server = Keyword.get(opts, :server_name, __MODULE__)
     speed = Keyword.get(opts, :speed, 1000)
-    timeout = Keyword.get(opts, :timeout, 5000)
+    timeout = Keyword.get(opts, :timeout, Config.get_timeout())
 
     # Convert from j1,j2,j3,j4 format to b,s,e,h format
     command = %{
@@ -154,7 +155,7 @@ defmodule Roarm.Robot do
 
   ## Options
     - `:server_name` - Name of the robot process (default: `__MODULE__`)
-    - `:timeout` - Command timeout in milliseconds (default: 5000)
+    - `:timeout` - Command timeout in milliseconds (default: from config or 5000)
 
   ## Examples
       {:ok, response} = Roarm.Robot.home()
@@ -163,7 +164,7 @@ defmodule Roarm.Robot do
   @doc group: :movement
   def home(opts \\ []) do
     server = Keyword.get(opts, :server_name, __MODULE__)
-    timeout = Keyword.get(opts, :timeout, 5000)
+    timeout = Keyword.get(opts, :timeout, Config.get_timeout())
     send_valid_command(%{t: 100}, server_name: server, timeout: timeout)
   end
 
@@ -269,7 +270,7 @@ defmodule Roarm.Robot do
 
   ## Options
     - `:server_name` - Name of the robot process (default: `__MODULE__`)
-    - `:timeout` - Command timeout in milliseconds (default: 5000)
+    - `:timeout` - Command timeout in milliseconds (default: from config or 5000)
 
   ## Examples
       {:ok, response} = Roarm.Robot.led_on(200)
@@ -279,7 +280,7 @@ defmodule Roarm.Robot do
   @doc group: :led
   def led_on(brightness \\ 255, opts \\ []) do
     server = Keyword.get(opts, :server_name, __MODULE__)
-    timeout = Keyword.get(opts, :timeout, 5000)
+    timeout = Keyword.get(opts, :timeout, Config.get_timeout())
     send_valid_command(%{t: 114, led: brightness}, server_name: server, timeout: timeout)
   end
 
@@ -288,7 +289,7 @@ defmodule Roarm.Robot do
 
   ## Options
     - `:server_name` - Name of the robot process (default: `__MODULE__`)
-    - `:timeout` - Command timeout in milliseconds (default: 5000)
+    - `:timeout` - Command timeout in milliseconds (default: from config or 5000)
 
   ## Examples
       {:ok, response} = Roarm.Robot.led_off()
@@ -297,7 +298,7 @@ defmodule Roarm.Robot do
   @doc group: :led
   def led_off(opts \\ []) do
     server = Keyword.get(opts, :server_name, __MODULE__)
-    timeout = Keyword.get(opts, :timeout, 5000)
+    timeout = Keyword.get(opts, :timeout, Config.get_timeout())
     send_valid_command(%{t: 114, led: 0}, server_name: server, timeout: timeout)
   end
 
@@ -369,7 +370,7 @@ defmodule Roarm.Robot do
   """
   def set_torque_enabled(enabled, opts \\ []) do
     server = Keyword.get(opts, :server_name, __MODULE__)
-    timeout = Keyword.get(opts, :timeout, 5000)
+    timeout = Keyword.get(opts, :timeout, Config.get_timeout())
     cmd = if enabled, do: 1, else: 0
     send_valid_command(%{t: 210, cmd: cmd}, server_name: server, timeout: timeout)
   end
@@ -469,7 +470,7 @@ defmodule Roarm.Robot do
   """
   def send_valid_command(command_map, opts \\ []) do
     server = Keyword.get(opts, :server_name, __MODULE__)
-    timeout = Keyword.get(opts, :timeout, 5000)
+    timeout = Keyword.get(opts, :timeout, Config.get_timeout())
     case Roarm.CommandValidator.validate_command(command_map) do
       {:ok, validated_command} ->
         json_command = Roarm.CommandValidator.to_json(validated_command)
@@ -487,7 +488,7 @@ defmodule Roarm.Robot do
   """
   def send_custom_command(command, opts \\ []) do
     server = Keyword.get(opts, :server_name, __MODULE__)
-    timeout = Keyword.get(opts, :timeout, 5000)
+    timeout = Keyword.get(opts, :timeout, Config.get_timeout())
     GenServer.call(resolve_server(server), {:custom_command, command, timeout})
   end
 
@@ -503,9 +504,9 @@ defmodule Roarm.Robot do
 
   @impl true
   def init(opts) do
-    robot_type = Keyword.get(opts, :robot_type, :roarm_m2)
-    port = Keyword.get(opts, :port)
-    baudrate = Keyword.get(opts, :baudrate, 115200)
+    robot_type = Keyword.get(opts, :robot_type, Config.get_robot_type())
+    port = Keyword.get(opts, :port, Config.get(:port))
+    baudrate = Keyword.get(opts, :baudrate, Config.get_baudrate())
 
     state = %__MODULE__{
       robot_type: robot_type,
@@ -708,7 +709,7 @@ defmodule Roarm.Robot do
 
   @impl true
   def handle_call({:custom_command, command}, _from, state) do
-    handle_call({:custom_command, command, 5000}, nil, state)
+    handle_call({:custom_command, command, Config.get_timeout()}, nil, state)
   end
 
   @impl true

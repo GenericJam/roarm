@@ -409,19 +409,19 @@ All commands return either `{:ok, response}` or `{:error, reason}`:
 ```elixir
 case Roarm.Robot.move_joints(%{j1: 45.0}) do
   {:ok, response} ->
-    IO.puts("Success: #{response}")
+    Logger.info("Success: #{response}")
 
   {:error, :not_connected} ->
-    IO.puts("Robot not connected")
+    Logger.info("Robot not connected")
 
   {:error, {:validation_error, message}} ->
-    IO.puts("Invalid command: #{message}")
+    Logger.info("Invalid command: #{message}")
 
   {:error, {:unknown_command, t_code}} ->
-    IO.puts("Unknown T-code: #{t_code}")
+    Logger.info("Unknown T-code: #{t_code}")
 
   {:error, reason} ->
-    IO.puts("Error: #{inspect(reason)}")
+    Logger.info("Error: #{inspect(reason)}")
 end
 ```
 

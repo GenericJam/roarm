@@ -7,11 +7,10 @@ defmodule Roarm.Communication do
   """
 
   use GenServer
-  alias Circuits.UART
   require Logger
+  alias Circuits.UART
+  alias Roarm.Config
 
-  @default_baudrate 115200
-  @default_timeout 5000
   @response_timeout 1000
 
   defstruct [:uart_pid, :port, :baudrate, :timeout]
@@ -24,8 +23,8 @@ defmodule Roarm.Communication do
   ## Options
     - `:name` - Process name for registry (default: __MODULE__)
     - `:port` - Serial port path (e.g., "/dev/ttyUSB0", "COM3")
-    - `:baudrate` - Communication speed (default: 115200)
-    - `:timeout` - Response timeout in milliseconds (default: 5000)
+    - `:baudrate` - Communication speed (default: from config or 115200)
+    - `:timeout` - Response timeout in milliseconds (default: from config or 5000)
   """
   def start_link(opts \\ []) do
     name = Keyword.get(opts, :name, __MODULE__)
@@ -94,8 +93,8 @@ defmodule Roarm.Communication do
 
   @impl true
   def init(opts) do
-    baudrate = Keyword.get(opts, :baudrate, @default_baudrate)
-    timeout = Keyword.get(opts, :timeout, @default_timeout)
+    baudrate = Keyword.get(opts, :baudrate, Config.get_baudrate())
+    timeout = Keyword.get(opts, :timeout, Config.get_timeout())
 
     {:ok, uart_pid} = UART.start_link()
 

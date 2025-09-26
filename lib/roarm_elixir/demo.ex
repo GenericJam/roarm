@@ -6,22 +6,23 @@ defmodule Roarm.Demo do
   to verify robot connectivity and functionality.
   """
 
-  alias Roarm.{Communication, Robot}
   require Logger
+  alias Roarm.Communication
+  alias Roarm.Robot
 
   @doc """
   Interactive demo that guides the user through robot setup and testing.
   """
   def interactive_demo do
-    IO.puts("\n" <> String.duplicate("=", 50))
-    IO.puts("RoArm Elixir Interactive Demo")
-    IO.puts(String.duplicate("=", 50))
+    Logger.info("\n" <> String.duplicate("=", 50))
+    Logger.info("RoArm Elixir Interactive Demo")
+    Logger.info(String.duplicate("=", 50))
 
     # List available ports
-    IO.puts("\nAvailable serial ports:")
+    Logger.info("\nAvailable serial ports:")
     ports = Communication.list_ports()
     Enum.each(ports, fn {port, info} ->
-      IO.puts("  #{port} - #{inspect(info)}")
+      Logger.info("  #{port} - #{inspect(info)}")
     end)
 
     # Get port from user
@@ -34,10 +35,10 @@ defmodule Roarm.Demo do
     case start_demo_session(robot_type, port) do
       {:ok, _pid} ->
         run_demo_sequence()
-        IO.puts("\nDemo completed successfully!")
+        Logger.info("\nDemo completed successfully!")
 
       {:error, reason} ->
-        IO.puts("\nDemo failed to start: #{inspect(reason)}")
+        Logger.info("\nDemo failed to start: #{inspect(reason)}")
     end
   end
 
@@ -45,16 +46,16 @@ defmodule Roarm.Demo do
   Run a basic connection test.
   """
   def test_connection(port, opts \\ []) do
-    IO.puts("Testing connection to #{port}...")
+    Logger.info("Testing connection to #{port}...")
 
     case Roarm.test_connection(port, opts) do
       {:ok, position} ->
-        IO.puts("✓ Connection successful!")
-        IO.puts("  Current position: #{inspect(position)}")
+        Logger.info("✓ Connection successful!")
+        Logger.info("  Current position: #{inspect(position)}")
         :ok
 
       {:error, reason} ->
-        IO.puts("✗ Connection failed: #{inspect(reason)}")
+        Logger.info("✗ Connection failed: #{inspect(reason)}")
         {:error, reason}
     end
   end
@@ -63,7 +64,7 @@ defmodule Roarm.Demo do
   Run a sequence of movement tests.
   """
   def movement_demo do
-    IO.puts("\n--- Movement Demo ---")
+    Logger.info("\n--- Movement Demo ---")
 
     # Test positions
     positions = [
@@ -73,22 +74,22 @@ defmodule Roarm.Demo do
       %{x: 0.0, y: 0.0, z: 200.0, t: 0.0}
     ]
 
-    IO.puts("Testing position movements...")
+    Logger.info("Testing position movements...")
     Enum.each(positions, fn pos ->
-      IO.puts("Moving to: #{inspect(pos)}")
+      Logger.info("Moving to: #{inspect(pos)}")
 
       case Robot.move_to_position(pos, server_name: Robot) do
         {:ok, _response} ->
-          IO.puts("✓ Move command sent")
+          Logger.info("✓ Move command sent")
           :timer.sleep(1000)
 
         {:error, reason} ->
-          IO.puts("✗ Move failed: #{inspect(reason)}")
+          Logger.info("✗ Move failed: #{inspect(reason)}")
       end
     end)
 
     # Test joint movements
-    IO.puts("\nTesting joint movements...")
+    Logger.info("\nTesting joint movements...")
     joint_configs = [
       %{j1: 0.0, j2: 0.0, j3: 0.0, j4: 0.0},
       %{j1: 30.0, j2: 45.0, j3: -30.0, j4: 0.0},
@@ -96,26 +97,26 @@ defmodule Roarm.Demo do
     ]
 
     Enum.each(joint_configs, fn joints ->
-      IO.puts("Moving joints to: #{inspect(joints)}")
+      Logger.info("Moving joints to: #{inspect(joints)}")
 
       case Robot.move_joints(joints, server_name: Robot) do
         {:ok, _response} ->
-          IO.puts("✓ Joint move command sent")
+          Logger.info("✓ Joint move command sent")
           :timer.sleep(1000)
 
         {:error, reason} ->
-          IO.puts("✗ Joint move failed: #{inspect(reason)}")
+          Logger.info("✗ Joint move failed: #{inspect(reason)}")
       end
     end)
 
     # Return to home
-    IO.puts("\nReturning to home position...")
+    Logger.info("\nReturning to home position...")
     case Robot.home(server_name: Robot) do
       {:ok, _response} ->
-        IO.puts("✓ Returned to home")
+        Logger.info("✓ Returned to home")
 
       {:error, reason} ->
-        IO.puts("✗ Home failed: #{inspect(reason)}")
+        Logger.info("✗ Home failed: #{inspect(reason)}")
     end
   end
 
@@ -123,7 +124,7 @@ defmodule Roarm.Demo do
   Demo LED color cycling.
   """
   def led_demo do
-    IO.puts("\n--- LED Demo ---")
+    Logger.info("\n--- LED Demo ---")
 
     colors = [
       {%{r: 255, g: 0, b: 0}, "Red"},
@@ -137,15 +138,15 @@ defmodule Roarm.Demo do
     ]
 
     Enum.each(colors, fn {color, name} ->
-      IO.puts("Setting LED to #{name}: #{inspect(color)}")
+      Logger.info("Setting LED to #{name}: #{inspect(color)}")
 
       case Robot.set_led(color, server_name: Robot) do
         {:ok, _response} ->
-          IO.puts("✓ LED color set")
+          Logger.info("✓ LED color set")
           :timer.sleep(500)
 
         {:error, reason} ->
-          IO.puts("✗ LED failed: #{inspect(reason)}")
+          Logger.info("✗ LED failed: #{inspect(reason)}")
       end
     end)
   end
@@ -154,25 +155,25 @@ defmodule Roarm.Demo do
   Demo torque lock functionality.
   """
   def torque_demo do
-    IO.puts("\n--- Torque Lock Demo ---")
+    Logger.info("\n--- Torque Lock Demo ---")
 
-    IO.puts("Enabling torque lock...")
+    Logger.info("Enabling torque lock...")
     case Robot.set_torque_lock(true, server_name: Robot) do
       {:ok, _response} ->
-        IO.puts("✓ Torque lock enabled")
+        Logger.info("✓ Torque lock enabled")
         :timer.sleep(2000)
 
       {:error, reason} ->
-        IO.puts("✗ Torque lock enable failed: #{inspect(reason)}")
+        Logger.info("✗ Torque lock enable failed: #{inspect(reason)}")
     end
 
-    IO.puts("Disabling torque lock...")
+    Logger.info("Disabling torque lock...")
     case Robot.set_torque_lock(false, server_name: Robot) do
       {:ok, _response} ->
-        IO.puts("✓ Torque lock disabled")
+        Logger.info("✓ Torque lock disabled")
 
       {:error, reason} ->
-        IO.puts("✗ Torque lock disable failed: #{inspect(reason)}")
+        Logger.info("✗ Torque lock disable failed: #{inspect(reason)}")
     end
   end
 
@@ -180,33 +181,33 @@ defmodule Roarm.Demo do
   Run a comprehensive test suite.
   """
   def full_test_suite(port, opts \\ []) do
-    IO.puts("\n" <> String.duplicate("=", 50))
-    IO.puts("RoArm Elixir Full Test Suite")
-    IO.puts(String.duplicate("=", 50))
+    Logger.info("\n" <> String.duplicate("=", 50))
+    Logger.info("RoArm Elixir Full Test Suite")
+    Logger.info(String.duplicate("=", 50))
 
     robot_opts = Keyword.merge([port: port], opts)
 
     with {:ok, _pid} <- start_demo_session(:roarm_m2, port, robot_opts) do
-      IO.puts("\n✓ Connection established")
+      Logger.info("\n✓ Connection established")
 
       # Test position retrieval
-      IO.puts("\nTesting position retrieval...")
+      Logger.info("\nTesting position retrieval...")
       case Robot.get_position(server_name: Robot) do
         {:ok, position} ->
-          IO.puts("✓ Current position: #{inspect(position)}")
+          Logger.info("✓ Current position: #{inspect(position)}")
 
         {:error, reason} ->
-          IO.puts("✗ Get position failed: #{inspect(reason)}")
+          Logger.info("✗ Get position failed: #{inspect(reason)}")
       end
 
       # Test joint retrieval
-      IO.puts("\nTesting joint retrieval...")
+      Logger.info("\nTesting joint retrieval...")
       case Robot.get_joints(server_name: Robot) do
         {:ok, joints} ->
-          IO.puts("✓ Current joints: #{inspect(joints)}")
+          Logger.info("✓ Current joints: #{inspect(joints)}")
 
         {:error, reason} ->
-          IO.puts("✗ Get joints failed: #{inspect(reason)}")
+          Logger.info("✗ Get joints failed: #{inspect(reason)}")
       end
 
       # Run all demo sequences
@@ -214,12 +215,12 @@ defmodule Roarm.Demo do
       led_demo()
       torque_demo()
 
-      IO.puts("\n✓ All tests completed")
+      Logger.info("\n✓ All tests completed")
       Robot.disconnect(server_name: Robot)
 
     else
       {:error, reason} ->
-        IO.puts("\n✗ Failed to connect: #{inspect(reason)}")
+        Logger.info("\n✗ Failed to connect: #{inspect(reason)}")
         {:error, reason}
     end
   end
@@ -238,11 +239,11 @@ defmodule Roarm.Demo do
   end
 
   defp get_robot_type_input do
-    IO.puts("\nSupported robot types:")
-    IO.puts("  1. roarm_m2 (default)")
-    IO.puts("  2. roarm_m2_pro")
-    IO.puts("  3. roarm_m3")
-    IO.puts("  4. roarm_m3_pro")
+    Logger.info("\nSupported robot types:")
+    Logger.info("  1. roarm_m2 (default)")
+    Logger.info("  2. roarm_m2_pro")
+    Logger.info("  3. roarm_m3")
+    Logger.info("  4. roarm_m3_pro")
 
     choice = IO.gets("Enter choice (1-4): ") |> String.trim()
 
@@ -264,17 +265,17 @@ defmodule Roarm.Demo do
 
     case Roarm.start_robot(robot_opts) do
       {:ok, pid} ->
-        IO.puts("✓ Robot started successfully")
+        Logger.info("✓ Robot started successfully")
         {:ok, pid}
 
       {:error, reason} ->
-        IO.puts("✗ Failed to start robot: #{inspect(reason)}")
+        Logger.info("✗ Failed to start robot: #{inspect(reason)}")
         {:error, reason}
     end
   end
 
   defp run_demo_sequence do
-    IO.puts("\nRunning demo sequence...")
+    Logger.info("\nRunning demo sequence...")
 
     if confirm("Run movement demo? (y/n): ") do
       movement_demo()
@@ -301,7 +302,7 @@ defmodule Roarm.Demo do
   Demo LED functionality (mounted on gripper).
   """
   def led_demo_advanced do
-    IO.puts("\n--- LED Demo (Gripper-Mounted) ---")
+    Logger.info("\n--- LED Demo (Gripper-Mounted) ---")
 
     # Test different LED brightness levels
     brightness_levels = [
@@ -313,48 +314,48 @@ defmodule Roarm.Demo do
     ]
 
     Enum.each(brightness_levels, fn {value, description} ->
-      IO.puts("Setting LED: #{description} (#{value}/255)")
+      Logger.info("Setting LED: #{description} (#{value}/255)")
 
       case Robot.led(Robot, :on, value) do
         {:ok, _response} ->
-          IO.puts("✓ LED command sent")
+          Logger.info("✓ LED command sent")
           :timer.sleep(1000)
 
         {:error, reason} ->
-          IO.puts("✗ LED failed: #{inspect(reason)}")
+          Logger.info("✗ LED failed: #{inspect(reason)}")
       end
     end)
 
     # Test simple on/off functions
-    IO.puts("\nTesting simple on/off functions:")
+    Logger.info("\nTesting simple on/off functions:")
 
-    IO.puts("Turning LED off...")
+    Logger.info("Turning LED off...")
     case Robot.led_off(server_name: Robot) do
       {:ok, _} ->
-        IO.puts("✓ LED turned off")
+        Logger.info("✓ LED turned off")
         :timer.sleep(2000)
 
       {:error, reason} ->
-        IO.puts("✗ LED off failed: #{inspect(reason)}")
+        Logger.info("✗ LED off failed: #{inspect(reason)}")
     end
 
-    IO.puts("Turning LED on at full brightness...")
+    Logger.info("Turning LED on at full brightness...")
     case Robot.led_on(255, server_name: Robot) do
       {:ok, _} ->
-        IO.puts("✓ LED turned on")
+        Logger.info("✓ LED turned on")
         :timer.sleep(2000)
 
       {:error, reason} ->
-        IO.puts("✗ LED on failed: #{inspect(reason)}")
+        Logger.info("✗ LED on failed: #{inspect(reason)}")
     end
 
-    IO.puts("Setting LED to 50% brightness...")
+    Logger.info("Setting LED to 50% brightness...")
     case Robot.led_on(128, server_name: Robot) do
       {:ok, _} ->
-        IO.puts("✓ LED set to 50% brightness")
+        Logger.info("✓ LED set to 50% brightness")
 
       {:error, reason} ->
-        IO.puts("✗ LED brightness failed: #{inspect(reason)}")
+        Logger.info("✗ LED brightness failed: #{inspect(reason)}")
     end
   end
 
@@ -362,11 +363,11 @@ defmodule Roarm.Demo do
   Demo teaching functionality - both drag teach and mission recording.
   """
   def teaching_demo do
-    IO.puts("\n--- Teaching Demo ---")
+    Logger.info("\n--- Teaching Demo ---")
 
-    IO.puts("1. Drag Teach Demo")
-    IO.puts("2. Mission Recording Demo")
-    IO.puts("3. Torque Control Demo")
+    Logger.info("1. Drag Teach Demo")
+    Logger.info("2. Mission Recording Demo")
+    Logger.info("3. Torque Control Demo")
 
     choice = IO.gets("Select demo (1-3): ") |> String.trim()
 
@@ -374,7 +375,7 @@ defmodule Roarm.Demo do
       "1" -> drag_teach_demo()
       "2" -> mission_demo()
       "3" -> torque_demo_advanced()
-      _ -> IO.puts("Invalid selection")
+      _ -> Logger.info("Invalid selection")
     end
   end
 
@@ -382,40 +383,40 @@ defmodule Roarm.Demo do
   Demonstrate drag teach functionality.
   """
   def drag_teach_demo do
-    IO.puts("\n=== Drag Teach Demo ===")
+    Logger.info("\n=== Drag Teach Demo ===")
     filename = "demo_movement.json"
 
-    IO.puts("Starting drag teach mode...")
-    IO.puts("The robot torque will be disabled so you can manually move it.")
-    IO.puts("Move the robot arm to create a sequence, then press Enter to stop.")
+    Logger.info("Starting drag teach mode...")
+    Logger.info("The robot torque will be disabled so you can manually move it.")
+    Logger.info("Move the robot arm to create a sequence, then press Enter to stop.")
 
     case Robot.drag_teach_start(filename, server_name: Robot) do
       :ok ->
-        IO.puts("✓ Drag teach started - manually move the robot arm now!")
+        Logger.info("✓ Drag teach started - manually move the robot arm now!")
         IO.gets("Press Enter when you're done moving the arm...")
 
         case Robot.drag_teach_stop(server_name: Robot) do
           {:ok, sample_count} ->
-            IO.puts("✓ Drag teach completed! Recorded #{sample_count} samples")
+            Logger.info("✓ Drag teach completed! Recorded #{sample_count} samples")
 
             if confirm("Replay the recorded movement? (y/n): ") do
-              IO.puts("Replaying movement...")
+              Logger.info("Replaying movement...")
 
               case Robot.drag_teach_replay(filename, server_name: Robot) do
                 :ok ->
-                  IO.puts("✓ Replay completed successfully")
+                  Logger.info("✓ Replay completed successfully")
 
                 {:error, reason} ->
-                  IO.puts("✗ Replay failed: #{inspect(reason)}")
+                  Logger.info("✗ Replay failed: #{inspect(reason)}")
               end
             end
 
           {:error, reason} ->
-            IO.puts("✗ Failed to stop drag teach: #{inspect(reason)}")
+            Logger.info("✗ Failed to stop drag teach: #{inspect(reason)}")
         end
 
       {:error, reason} ->
-        IO.puts("✗ Failed to start drag teach: #{inspect(reason)}")
+        Logger.info("✗ Failed to start drag teach: #{inspect(reason)}")
     end
   end
 
@@ -423,15 +424,15 @@ defmodule Roarm.Demo do
   Demonstrate mission recording functionality.
   """
   def mission_demo do
-    IO.puts("\n=== Mission Recording Demo ===")
+    Logger.info("\n=== Mission Recording Demo ===")
     mission_name = "demo_mission"
 
     # Create a new mission
-    IO.puts("Creating mission: #{mission_name}")
+    Logger.info("Creating mission: #{mission_name}")
 
     case Robot.create_mission(mission_name, "Demo mission created in Elixir", server_name: Robot) do
       {:ok, _} ->
-        IO.puts("✓ Mission created")
+        Logger.info("✓ Mission created")
 
         # Record some positions
         positions = [
@@ -441,7 +442,7 @@ defmodule Roarm.Demo do
           %{j1: 0, j2: 0, j3: 0, j4: 0}
         ]
 
-        IO.puts("Recording mission steps...")
+        Logger.info("Recording mission steps...")
 
         Enum.each(positions, fn pos ->
           # Move to position first
@@ -452,41 +453,41 @@ defmodule Roarm.Demo do
               # Add current position to mission
               case Robot.add_mission_step(mission_name, 0.5, server_name: Robot) do
                 {:ok, _} ->
-                  IO.puts("✓ Added step: #{inspect(pos)}")
+                  Logger.info("✓ Added step: #{inspect(pos)}")
 
                 {:error, reason} ->
-                  IO.puts("✗ Failed to add step: #{inspect(reason)}")
+                  Logger.info("✗ Failed to add step: #{inspect(reason)}")
               end
 
             {:error, reason} ->
-              IO.puts("✗ Failed to move to position: #{inspect(reason)}")
+              Logger.info("✗ Failed to move to position: #{inspect(reason)}")
           end
         end)
 
         # Add a delay step
         case Robot.add_mission_delay(mission_name, 2000, server_name: Robot) do
           {:ok, _} ->
-            IO.puts("✓ Added 2-second delay")
+            Logger.info("✓ Added 2-second delay")
 
           {:error, reason} ->
-            IO.puts("✗ Failed to add delay: #{inspect(reason)}")
+            Logger.info("✗ Failed to add delay: #{inspect(reason)}")
         end
 
         # Play the mission
         if confirm("Play the recorded mission? (y/n): ") do
-          IO.puts("Playing mission...")
+          Logger.info("Playing mission...")
 
           case Robot.play_mission(mission_name, 1, server_name: Robot) do
             {:ok, _} ->
-              IO.puts("✓ Mission playback started")
+              Logger.info("✓ Mission playback started")
 
             {:error, reason} ->
-              IO.puts("✗ Failed to play mission: #{inspect(reason)}")
+              Logger.info("✗ Failed to play mission: #{inspect(reason)}")
           end
         end
 
       {:error, reason} ->
-        IO.puts("✗ Failed to create mission: #{inspect(reason)}")
+        Logger.info("✗ Failed to create mission: #{inspect(reason)}")
     end
   end
 
@@ -494,31 +495,31 @@ defmodule Roarm.Demo do
   Advanced torque control demonstration.
   """
   def torque_demo_advanced do
-    IO.puts("\n=== Advanced Torque Control Demo ===")
+    Logger.info("\n=== Advanced Torque Control Demo ===")
 
-    IO.puts("Testing torque enable/disable...")
+    Logger.info("Testing torque enable/disable...")
 
     # Disable torque
-    IO.puts("Disabling torque - you should be able to move the arm manually")
+    Logger.info("Disabling torque - you should be able to move the arm manually")
 
     case Robot.set_torque_enabled(false, server_name: Robot) do
       {:ok, _} ->
-        IO.puts("✓ Torque disabled")
+        Logger.info("✓ Torque disabled")
         IO.gets("Try moving the arm manually, then press Enter to continue...")
 
         # Re-enable torque
-        IO.puts("Re-enabling torque - arm should lock in place")
+        Logger.info("Re-enabling torque - arm should lock in place")
 
         case Robot.set_torque_enabled(true, server_name: Robot) do
           {:ok, _} ->
-            IO.puts("✓ Torque re-enabled")
+            Logger.info("✓ Torque re-enabled")
 
           {:error, reason} ->
-            IO.puts("✗ Failed to re-enable torque: #{inspect(reason)}")
+            Logger.info("✗ Failed to re-enable torque: #{inspect(reason)}")
         end
 
       {:error, reason} ->
-        IO.puts("✗ Failed to disable torque: #{inspect(reason)}")
+        Logger.info("✗ Failed to disable torque: #{inspect(reason)}")
     end
   end
 
@@ -526,19 +527,19 @@ defmodule Roarm.Demo do
   Interactive teaching session.
   """
   def interactive_teaching do
-    IO.puts("\n=== Interactive Teaching Session ===")
+    Logger.info("\n=== Interactive Teaching Session ===")
 
     loop_teaching_menu()
   end
 
   defp loop_teaching_menu do
-    IO.puts("\nTeaching Options:")
-    IO.puts("1. Start drag teach")
-    IO.puts("2. Replay saved movement")
-    IO.puts("3. Toggle torque on/off")
-    IO.puts("4. Create/record mission")
-    IO.puts("5. Play mission")
-    IO.puts("q. Quit")
+    Logger.info("\nTeaching Options:")
+    Logger.info("1. Start drag teach")
+    Logger.info("2. Replay saved movement")
+    Logger.info("3. Toggle torque on/off")
+    Logger.info("4. Create/record mission")
+    Logger.info("5. Play mission")
+    Logger.info("q. Quit")
 
     choice = IO.gets("Select option: ") |> String.trim() |> String.downcase()
 
@@ -568,10 +569,10 @@ defmodule Roarm.Demo do
         loop_teaching_menu()
 
       "q" ->
-        IO.puts("Exiting teaching session")
+        Logger.info("Exiting teaching session")
 
       _ ->
-        IO.puts("Invalid option")
+        Logger.info("Invalid option")
         loop_teaching_menu()
     end
   end
@@ -579,19 +580,19 @@ defmodule Roarm.Demo do
   defp start_interactive_drag_teach(filename) do
     case Robot.drag_teach_start(filename, server_name: Robot) do
       :ok ->
-        IO.puts("Drag teach started. Move the robot and press Enter when done.")
+        Logger.info("Drag teach started. Move the robot and press Enter when done.")
         IO.gets("")
 
         case Robot.drag_teach_stop(server_name: Robot) do
           {:ok, count} ->
-            IO.puts("Recorded #{count} samples to #{filename}")
+            Logger.info("Recorded #{count} samples to #{filename}")
 
           {:error, reason} ->
-            IO.puts("Error stopping: #{inspect(reason)}")
+            Logger.info("Error stopping: #{inspect(reason)}")
         end
 
       {:error, reason} ->
-        IO.puts("Error starting: #{inspect(reason)}")
+        Logger.info("Error starting: #{inspect(reason)}")
     end
   end
 
@@ -605,10 +606,10 @@ defmodule Roarm.Demo do
 
     case Robot.drag_teach_replay(filename, speed_multiplier: speed, server_name: Robot) do
       :ok ->
-        IO.puts("Replay completed")
+        Logger.info("Replay completed")
 
       {:error, reason} ->
-        IO.puts("Replay failed: #{inspect(reason)}")
+        Logger.info("Replay failed: #{inspect(reason)}")
     end
   end
 
@@ -618,10 +619,10 @@ defmodule Roarm.Demo do
 
     case Robot.set_torque_enabled(enabled, server_name: Robot) do
       {:ok, _} ->
-        IO.puts("Torque #{if enabled, do: "enabled", else: "disabled"}")
+        Logger.info("Torque #{if enabled, do: "enabled", else: "disabled"}")
 
       {:error, reason} ->
-        IO.puts("Failed: #{inspect(reason)}")
+        Logger.info("Failed: #{inspect(reason)}")
     end
   end
 
@@ -630,10 +631,10 @@ defmodule Roarm.Demo do
 
     case Robot.create_mission(mission_name, description, server_name: Robot) do
       {:ok, _} ->
-        IO.puts("Mission created. Use robot controls to move to positions, then add steps.")
+        Logger.info("Mission created. Use robot controls to move to positions, then add steps.")
 
       {:error, reason} ->
-        IO.puts("Failed to create mission: #{inspect(reason)}")
+        Logger.info("Failed to create mission: #{inspect(reason)}")
     end
   end
 
@@ -648,10 +649,10 @@ defmodule Roarm.Demo do
 
     case Robot.play_mission(mission_name, times, server_name: Robot) do
       {:ok, _} ->
-        IO.puts("Mission playback started")
+        Logger.info("Mission playback started")
 
       {:error, reason} ->
-        IO.puts("Failed to play mission: #{inspect(reason)}")
+        Logger.info("Failed to play mission: #{inspect(reason)}")
     end
   end
 

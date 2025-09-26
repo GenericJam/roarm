@@ -82,11 +82,11 @@ Use the built-in test function to verify your setup:
 # Test connection (replace with your port)
 case Roarm.test_connection("/dev/cu.usbserial-110") do
   {:ok, position} ->
-    IO.puts("✅ Connection successful!")
+    Logger.info("✅ Connection successful!")
     IO.inspect(position)
 
   {:error, reason} ->
-    IO.puts("❌ Connection failed: #{inspect(reason)}")
+    Logger.info("❌ Connection failed: #{inspect(reason)}")
 end
 ```
 
