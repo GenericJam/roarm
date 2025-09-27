@@ -10,7 +10,7 @@ defmodule Roarm do
 
   - Serial communication with RoArm devices
   - Position and joint control
-  - LED control and torque lock
+  - LED control and torque control
   - Concurrent robot control using GenServer
   - Support for multiple RoArm models
 
@@ -43,8 +43,21 @@ defmodule Roarm do
       # Partial joint update - only move joint 1
       Roarm.Robot.move_joints(%{j1: 90.0})
 
+      # Move a single joint directly
+      Roarm.Robot.move_joint(1, 45.0)  # Move base joint to 45 degrees
+      Roarm.Robot.move_joint(4, -30.0, speed: 2000)  # Move wrist joint with custom speed
+
       # Set LED color
       Roarm.Robot.set_led(%{r: 255, g: 0, b: 0})
+
+      # Control gripper (0=open, 100=closed, 30=practical max opening)
+      Roarm.Robot.gripper_open()      # Open to maximum practical position (30%)
+      Roarm.Robot.gripper_close()     # Close gripper completely
+      Roarm.Robot.gripper_control(50) # Half-way position
+
+      # Enable/disable torque (for manual movement)
+      Roarm.set_torque_enabled(false)  # Allow manual movement
+      Roarm.set_torque_enabled(true)   # Lock joints in position
 
   ## Modules
 
@@ -154,5 +167,26 @@ defmodule Roarm do
       error ->
         error
     end
+  end
+
+  @doc """
+  Enable or disable torque control for the robot joints.
+
+  When torque is enabled, joints are locked in position.
+  When disabled, joints can be moved manually.
+
+  ## Parameters
+    - `enabled` - true to enable torque (lock joints), false to disable
+    - `opts` - Options including :server_name and :timeout
+
+  ## Examples
+      # Enable torque (lock joints)
+      Roarm.set_torque_enabled(true)
+
+      # Disable torque (allow manual movement)
+      Roarm.set_torque_enabled(false)
+  """
+  def set_torque_enabled(enabled, opts \\ []) do
+    Robot.set_torque_enabled(enabled, opts)
   end
 end

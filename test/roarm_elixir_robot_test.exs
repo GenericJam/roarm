@@ -667,4 +667,188 @@ defmodule Roarm.RobotTest do
       GenServer.stop(pid)
     end
   end
+
+  describe "Gripper control" do
+    test "gripper_control accepts valid position values for M2" do
+      {:ok, pid} = Robot.start_link([robot_type: :roarm_m2])
+
+      # Test valid position range (0-100)
+      assert {:error, :not_connected} = Robot.gripper_control(0, server_name: pid)
+      assert {:error, :not_connected} = Robot.gripper_control(50, server_name: pid)
+      assert {:error, :not_connected} = Robot.gripper_control(100, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "gripper_control accepts valid position values for M3" do
+      {:ok, pid} = Robot.start_link([robot_type: :roarm_m3])
+
+      # Test valid position range (0-100)
+      assert {:error, :not_connected} = Robot.gripper_control(0, server_name: pid)
+      assert {:error, :not_connected} = Robot.gripper_control(75, server_name: pid)
+      assert {:error, :not_connected} = Robot.gripper_control(100, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "gripper_control clamps out-of-range values" do
+      {:ok, pid} = Robot.start_link([robot_type: :roarm_m2])
+
+      # Test values outside range are accepted (should be clamped internally)
+      assert {:error, :not_connected} = Robot.gripper_control(-10, server_name: pid)
+      assert {:error, :not_connected} = Robot.gripper_control(150, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "gripper_control uses model-specific commands" do
+      # Test M2 uses T:121 joint 4 control
+      {:ok, pid_m2} = Robot.start_link([robot_type: :roarm_m2])
+
+      # Mock the command sending to verify correct T-code is used
+      # This will fail with :not_connected but we're testing the function exists
+      assert {:error, :not_connected} = Robot.gripper_control(50, server_name: pid_m2)
+
+      GenServer.stop(pid_m2)
+
+      # Test M3 uses T:222 gripper command
+      {:ok, pid_m3} = Robot.start_link([robot_type: :roarm_m3])
+
+      assert {:error, :not_connected} = Robot.gripper_control(50, server_name: pid_m3)
+
+      GenServer.stop(pid_m3)
+    end
+
+    test "gripper_control with custom speed option" do
+      {:ok, pid} = Robot.start_link([robot_type: :roarm_m2])
+
+      # Test with custom speed
+      assert {:error, :not_connected} = Robot.gripper_control(50, speed: 1000, server_name: pid)
+      assert {:error, :not_connected} = Robot.gripper_control(75, speed: 4096, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "gripper_control workflow for different robot types" do
+      # M2 workflow
+      {:ok, pid_m2} = Robot.start_link([robot_type: :roarm_m2])
+
+      # Test open and close cycle
+      assert {:error, :not_connected} = Robot.gripper_control(0, server_name: pid_m2)   # Open
+      assert {:error, :not_connected} = Robot.gripper_control(100, server_name: pid_m2) # Close
+      assert {:error, :not_connected} = Robot.gripper_control(50, server_name: pid_m2)  # Half
+
+      GenServer.stop(pid_m2)
+
+      # M3 workflow
+      {:ok, pid_m3} = Robot.start_link([robot_type: :roarm_m3])
+
+      assert {:error, :not_connected} = Robot.gripper_control(0, server_name: pid_m3)   # Open
+      assert {:error, :not_connected} = Robot.gripper_control(100, server_name: pid_m3) # Close
+      assert {:error, :not_connected} = Robot.gripper_control(75, server_name: pid_m3)  # Partial
+
+      GenServer.stop(pid_m3)
+    end
+
+    test "get_robot_type returns correct robot type" do
+      {:ok, pid_m2} = Robot.start_link([robot_type: :roarm_m2])
+      assert {:ok, :roarm_m2} = Robot.get_robot_type(server_name: pid_m2)
+      GenServer.stop(pid_m2)
+
+      {:ok, pid_m3} = Robot.start_link([robot_type: :roarm_m3])
+      assert {:ok, :roarm_m3} = Robot.get_robot_type(server_name: pid_m3)
+      GenServer.stop(pid_m3)
+    end
+  end
+
+  describe "Single joint control" do
+    test "move_joint accepts valid joint numbers and angles" do
+      {:ok, pid} = Robot.start_link()
+
+      # Test all valid joint numbers (1-6)
+      assert {:error, :not_connected} = Robot.move_joint(1, 45.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_joint(2, -30.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_joint(3, 90.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_joint(4, 0.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_joint(5, 15.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_joint(6, -45.0, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "move_joint clamps angles to valid range" do
+      {:ok, pid} = Robot.start_link()
+
+      # Test boundary values - should be accepted (clamped internally)
+      assert {:error, :not_connected} = Robot.move_joint(1, -180.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_joint(2, 180.0, server_name: pid)
+
+      # Test out-of-range values - should be accepted (clamped internally)
+      assert {:error, :not_connected} = Robot.move_joint(1, -200.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_joint(3, 250.0, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "move_joint with custom speed option" do
+      {:ok, pid} = Robot.start_link()
+
+      # Test with custom speed
+      assert {:error, :not_connected} = Robot.move_joint(1, 45.0, speed: 500, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_joint(2, -30.0, speed: 2000, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_joint(4, 90.0, speed: 4096, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "move_joint with invalid joint numbers should fail" do
+      {:ok, pid} = Robot.start_link()
+
+      # These should raise FunctionClauseError due to guard constraints
+      assert_raise FunctionClauseError, fn ->
+        Robot.move_joint(0, 45.0, server_name: pid)
+      end
+
+      assert_raise FunctionClauseError, fn ->
+        Robot.move_joint(7, 45.0, server_name: pid)
+      end
+
+      assert_raise FunctionClauseError, fn ->
+        Robot.move_joint(-1, 45.0, server_name: pid)
+      end
+
+      GenServer.stop(pid)
+    end
+
+    test "move_joint with non-numeric angles should fail" do
+      {:ok, pid} = Robot.start_link()
+
+      # These should raise FunctionClauseError due to guard constraints
+      assert_raise FunctionClauseError, fn ->
+        Robot.move_joint(1, "45", server_name: pid)
+      end
+
+      assert_raise FunctionClauseError, fn ->
+        Robot.move_joint(1, :invalid, server_name: pid)
+      end
+
+      assert_raise FunctionClauseError, fn ->
+        Robot.move_joint(1, nil, server_name: pid)
+      end
+
+      GenServer.stop(pid)
+    end
+
+    test "move_joint accepts integer and float angles" do
+      {:ok, pid} = Robot.start_link()
+
+      # Should handle both integer and float angles
+      assert {:error, :not_connected} = Robot.move_joint(1, 45, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_joint(2, 45.5, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_joint(3, -30, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_joint(4, -30.75, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+  end
 end

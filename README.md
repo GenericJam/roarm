@@ -443,14 +443,47 @@ Roarm.Robot.send_custom_command(~s({"T": 112, "mode": 1, "b": 60, "s": 110, "e":
 # b,s,e,h: torque limits for base, shoulder, elbow, hand (0-1000)
 ```
 
+### 🤖 M2 Gripper Commands (4-DOF Models)
+
+#### Gripper Control (Joint 4)
+```elixir
+# High-level gripper functions (recommended)
+{:ok, response} = Roarm.Robot.gripper_control(0)     # Close gripper
+{:ok, response} = Roarm.Robot.gripper_control(50)    # Half open
+{:ok, response} = Roarm.Robot.gripper_control(100)   # Fully open
+
+# Convenience functions
+{:ok, response} = Roarm.Robot.gripper_open()         # Fully open (100%)
+{:ok, response} = Roarm.Robot.gripper_open(75)       # Open 75%
+{:ok, response} = Roarm.Robot.gripper_close()        # Close gripper
+
+# Raw commands using joint 4 control (T:121)
+Roarm.Robot.send_custom_command(~s({"T": 121, "joint": 4, "angle": 0, "spd": 2000}))     # Close
+Roarm.Robot.send_custom_command(~s({"T": 121, "joint": 4, "angle": 90, "spd": 2000}))    # Half open
+Roarm.Robot.send_custom_command(~s({"T": 121, "joint": 4, "angle": 180, "spd": 2000}))   # Fully open
+
+# Or using multi-joint control (T:122)
+Roarm.Robot.move_joints(%{j1: 0, j2: 45, j3: -30, j4: 90})  # Half open gripper with arm position
+```
+
 ### 🎮 M3 Gripper Commands (6-DOF Models Only)
 
 #### Gripper Control (T:222)
 ```elixir
-# Raw commands (no high-level functions yet)
-Roarm.Robot.send_custom_command(~s({"T": 222, "mode": 1, "angle": 50}))   # Open gripper 50%
+# High-level gripper functions (recommended) - works for all models
+{:ok, response} = Roarm.Robot.gripper_control(0)     # Close gripper
+{:ok, response} = Roarm.Robot.gripper_control(50)    # Half open
+{:ok, response} = Roarm.Robot.gripper_control(100)   # Fully open
+
+# Convenience functions
+{:ok, response} = Roarm.Robot.gripper_open()         # Fully open (100%)
+{:ok, response} = Roarm.Robot.gripper_open(75)       # Open 75%
+{:ok, response} = Roarm.Robot.gripper_close()        # Close gripper
+
+# Raw commands using dedicated gripper control (T:222)
+Roarm.Robot.send_custom_command(~s({"T": 222, "mode": 0, "angle": 50}))   # Open gripper 50%
 Roarm.Robot.send_custom_command(~s({"T": 222, "mode": 0, "angle": 0}))    # Close gripper
-Roarm.Robot.send_custom_command(~s({"T": 222, "mode": 1, "angle": 100}))  # Fully open
+Roarm.Robot.send_custom_command(~s({"T": 222, "mode": 0, "angle": 100}))  # Fully open
 ```
 
 ### 🚀 Quick Action Examples
@@ -487,8 +520,8 @@ Roarm.Robot.move_to_position(%{x: 150, y: 100, z: 200, t: 0})
 # Lower to object
 Roarm.Robot.move_to_position(%{x: 150, y: 100, z: 100, t: 0})
 
-# Close gripper (M3 only)
-Roarm.Robot.send_custom_command(~s({"T": 222, "mode": 0, "angle": 0}))
+# Close gripper (works for all models)
+Roarm.Robot.gripper_close()
 
 # Lift object
 Roarm.Robot.move_to_position(%{x: 150, y: 100, z: 200, t: 0})
@@ -498,7 +531,7 @@ Roarm.Robot.move_to_position(%{x: 200, y: 200, z: 200, t: 0})
 
 # Lower and release
 Roarm.Robot.move_to_position(%{x: 200, y: 200, z: 100, t: 0})
-Roarm.Robot.send_custom_command(~s({"T": 222, "mode": 1, "angle": 100}))
+Roarm.Robot.gripper_open()
 
 # Return home
 Roarm.Robot.home()

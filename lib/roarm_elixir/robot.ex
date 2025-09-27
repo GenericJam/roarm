@@ -221,6 +221,54 @@ defmodule Roarm.Robot do
   end
 
   @doc """
+  Move a single joint to a specific angle.
+
+  ## Parameters
+    - `joint` - Joint number (1-6):
+      - 1: Base joint (j1) - controls rotation around vertical axis
+      - 2: Shoulder joint (j2) - controls arm lift/lower
+      - 3: Elbow joint (j3) - controls forearm angle
+      - 4: Wrist joint (j4) - controls end effector rotation
+      - 5: Additional joint (j5) - for extended robot models
+      - 6: Additional joint (j6) - for extended robot models
+    - `angle` - Target angle in degrees (-180.0 to 180.0)
+    - `opts` - Optional parameters:
+      - `:speed` - Movement speed (1-4096, default: 1000)
+      - `:timeout` - Command timeout in milliseconds (default: from config)
+      - `:server_name` - Robot server name (default: __MODULE__)
+
+  ## Examples
+      # Move base joint (j1) to 45 degrees
+      Roarm.Robot.move_joint(1, 45.0)
+
+      # Move shoulder joint (j2) to -30 degrees with custom speed
+      Roarm.Robot.move_joint(2, -30.0, speed: 2000)
+
+      # Move wrist joint (j4) to 90 degrees
+      Roarm.Robot.move_joint(4, 90.0)
+  """
+  @doc group: :movement
+  @spec move_joint(1 | 2 | 3 | 4 | 5 | 6, number(), keyword()) :: {:ok, any()} | {:error, any()}
+  def move_joint(joint, angle, opts \\ []) when joint in 1..6 and is_number(angle) do
+    server = Keyword.get(opts, :server_name, __MODULE__)
+    speed = Keyword.get(opts, :speed, 1000)
+    timeout = Keyword.get(opts, :timeout, Config.get_timeout())
+
+    # Clamp angle to valid range
+    clamped_angle = max(-180.0, min(180.0, angle))
+
+    # Build command for single joint control using T:121
+    command = %{
+      t: 121,
+      joint: joint,
+      angle: clamped_angle,
+      spd: max(1, min(speed, 4096))  # Clamp speed to valid range
+    }
+
+    send_valid_command(command, server_name: server, timeout: timeout)
+  end
+
+  @doc """
   Move the robot to its home position.
 
   ## Options
@@ -370,6 +418,96 @@ defmodule Roarm.Robot do
     server = Keyword.get(opts, :server_name, __MODULE__)
     timeout = Keyword.get(opts, :timeout, Config.get_timeout())
     send_valid_command(%{t: 114, led: 0}, server_name: server, timeout: timeout)
+  end
+
+  @doc """
+  Control the gripper position.
+
+  Uses the appropriate gripper control method based on robot model:
+  - M2: Uses joint 4 control (T:121)
+  - M3: Uses dedicated gripper command (T:222)
+
+  ## Parameters
+    - `position` - Gripper position (0-100%, where 0=fully open, 100=closed)
+                   Note: Due to physical constraints, 30 is effectively as open as possible
+
+  ## Options
+    - `:server_name` - Name of the robot process (default: `__MODULE__`)
+    - `:timeout` - Command timeout in milliseconds (default: from config or 5000)
+    - `:speed` - Movement speed (1-4096, default: 2000)
+
+  ## Examples
+      {:ok, response} = Roarm.Robot.gripper_control(100)   # Close gripper
+      {:ok, response} = Roarm.Robot.gripper_control(50)    # Half open
+      {:ok, response} = Roarm.Robot.gripper_control(30)    # Fully open (physical limit)
+      {:ok, response} = Roarm.Robot.gripper_control(0)     # Fully open (theoretical)
+      {:ok, response} = Roarm.Robot.gripper_control(75, speed: 1000)
+  """
+  @doc group: :gripper
+  def gripper_control(position, opts \\ []) when is_number(position) do
+    server = Keyword.get(opts, :server_name, __MODULE__)
+    timeout = Keyword.get(opts, :timeout, Config.get_timeout())
+    speed = Keyword.get(opts, :speed, 2000)
+
+    # Clamp position to valid range
+    clamped_position = max(0, min(100, position))
+
+    # Get robot type from server state to determine gripper control method
+    robot_type = GenServer.call(resolve_server(server), :get_robot_type)
+
+    case robot_type do
+      :roarm_m2 ->
+        # M2: Use joint 4 control (T:121)
+        servo_angle = (clamped_position / 100.0) * 180.0
+        send_valid_command(%{t: 121, joint: 4, angle: servo_angle, spd: speed},
+                          server_name: server, timeout: timeout)
+
+      robot_type when robot_type in [:roarm_m3, :roarm_m3_pro] ->
+        # M3: Use dedicated gripper command (T:222)
+        send_valid_command(%{t: 222, mode: 0, angle: clamped_position},
+                          server_name: server, timeout: timeout)
+
+      _ ->
+        {:error, "Gripper control not supported for robot type: #{robot_type}"}
+    end
+  end
+
+  @doc """
+  Open the gripper to specified position.
+
+  ## Parameters
+    - `position` - How far to open (0-100%, default: 30% which is maximum practical opening)
+                   Note: Due to physical constraints, 30 is effectively as open as possible
+
+  ## Options
+    - `:server_name` - Name of the robot process (default: `__MODULE__`)
+    - `:timeout` - Command timeout in milliseconds (default: from config or 5000)
+    - `:speed` - Movement speed (1-4096, default: 2000)
+
+  ## Examples
+      {:ok, response} = Roarm.Robot.gripper_open()      # Fully open (30%)
+      {:ok, response} = Roarm.Robot.gripper_open(50)    # Half open (50%)
+  """
+  @doc group: :gripper
+  def gripper_open(position \\ 30, opts \\ []) do
+    gripper_control(position, opts)
+  end
+
+  @doc """
+  Close the gripper.
+
+  ## Options
+    - `:server_name` - Name of the robot process (default: `__MODULE__`)
+    - `:timeout` - Command timeout in milliseconds (default: from config or 5000)
+    - `:speed` - Movement speed (1-4096, default: 2000)
+
+  ## Examples
+      {:ok, response} = Roarm.Robot.gripper_close()
+      {:ok, response} = Roarm.Robot.gripper_close(speed: 1000)
+  """
+  @doc group: :gripper
+  def gripper_close(opts \\ []) do
+    gripper_control(100, opts)
   end
 
   @doc """
@@ -568,6 +706,22 @@ defmodule Roarm.Robot do
   def connected?(opts \\ []) do
     server = Keyword.get(opts, :server_name, __MODULE__)
     GenServer.call(resolve_server(server), :connected?)
+  end
+
+  @doc """
+  Get the robot type that this server is configured for.
+
+  ## Options
+  - `:server_name` - Server name (default: `Roarm.Robot`)
+
+  ## Examples
+      {:ok, :roarm_m2} = Roarm.Robot.get_robot_type()
+      {:ok, :roarm_m3} = Roarm.Robot.get_robot_type(server_name: :robot1)
+  """
+  def get_robot_type(opts \\ []) do
+    server = Keyword.get(opts, :server_name, __MODULE__)
+    robot_type = GenServer.call(resolve_server(server), :get_robot_type)
+    {:ok, robot_type}
   end
 
   # Server callbacks
@@ -977,6 +1131,10 @@ defmodule Roarm.Robot do
   @impl true
   def handle_call(:connected?, _from, state) do
     {:reply, state.connected, state}
+  end
+
+  def handle_call(:get_robot_type, _from, state) do
+    {:reply, state.robot_type, state}
   end
 
   # Handle messages from teaching task
