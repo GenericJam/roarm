@@ -51,12 +51,12 @@ defmodule Roarm.MixProject do
 
   defp docs do
     [
-      main: "Roarm",
+      main: "readme",
       name: "Roarm",
       source_url: "https://github.com/GenericJam/roarm",
       homepage_url: "https://github.com/GenericJam/roarm",
       extras: [
-        "README.md",
+        "README.md": [title: "Overview & API Reference"],
         "CHANGELOG.md": [title: "Changelog"],
         "guides/getting-started.md": [title: "Getting Started"],
         "guides/hardware-setup.md": [title: "Hardware Setup"],

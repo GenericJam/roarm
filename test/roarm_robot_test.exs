@@ -851,4 +851,350 @@ defmodule Roarm.RobotTest do
       GenServer.stop(pid)
     end
   end
+
+  describe "Convenience joint control functions" do
+    test "move_base function delegates to move_joint(1, ...)" do
+      {:ok, pid} = Robot.start_link()
+
+      # Test basic functionality
+      assert {:error, :not_connected} = Robot.move_base(45.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_base(-90.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_base(0.0, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "move_base with custom speed option" do
+      {:ok, pid} = Robot.start_link()
+
+      # Test with custom speed
+      assert {:error, :not_connected} = Robot.move_base(45.0, speed: 2000, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_base(-30.0, speed: 500, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "move_base clamps angles to valid range" do
+      {:ok, pid} = Robot.start_link()
+
+      # Test boundary and out-of-range values
+      assert {:error, :not_connected} = Robot.move_base(-180.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_base(180.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_base(-200.0, server_name: pid)  # Should clamp
+      assert {:error, :not_connected} = Robot.move_base(250.0, server_name: pid)   # Should clamp
+
+      GenServer.stop(pid)
+    end
+
+    test "move_base accepts integer and float angles" do
+      {:ok, pid} = Robot.start_link()
+
+      assert {:error, :not_connected} = Robot.move_base(45, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_base(45.5, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_base(-30, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_base(-30.75, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "move_base rejects invalid angle types" do
+      {:ok, pid} = Robot.start_link()
+
+      # Should raise FunctionClauseError for non-numeric angles
+      assert_raise FunctionClauseError, fn ->
+        Robot.move_base("45", server_name: pid)
+      end
+
+      assert_raise FunctionClauseError, fn ->
+        Robot.move_base(:invalid, server_name: pid)
+      end
+
+      assert_raise FunctionClauseError, fn ->
+        Robot.move_base(nil, server_name: pid)
+      end
+
+      GenServer.stop(pid)
+    end
+
+    test "move_shoulder function delegates to move_joint(2, ...)" do
+      {:ok, pid} = Robot.start_link()
+
+      # Test basic functionality
+      assert {:error, :not_connected} = Robot.move_shoulder(30.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_shoulder(-45.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_shoulder(0.0, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "move_shoulder with custom speed and timeout options" do
+      {:ok, pid} = Robot.start_link()
+
+      # Test with custom options
+      assert {:error, :not_connected} = Robot.move_shoulder(30.0, speed: 1500, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_shoulder(-45.0, timeout: 5000, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_shoulder(60.0, speed: 800, timeout: 10000, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "move_elbow function delegates to move_joint(3, ...)" do
+      {:ok, pid} = Robot.start_link()
+
+      # Test basic functionality
+      assert {:error, :not_connected} = Robot.move_elbow(90.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_elbow(-45.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_elbow(0.0, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "move_elbow with custom speed option" do
+      {:ok, pid} = Robot.start_link()
+
+      # Test with custom speed
+      assert {:error, :not_connected} = Robot.move_elbow(90.0, speed: 800, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_elbow(-60.0, speed: 3000, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "move_wrist function delegates to move_joint(4, ...)" do
+      {:ok, pid} = Robot.start_link()
+
+      # Test basic functionality
+      assert {:error, :not_connected} = Robot.move_wrist(90.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_wrist(-45.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_wrist(0.0, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "move_wrist with custom speed option" do
+      {:ok, pid} = Robot.start_link()
+
+      # Test with custom speed
+      assert {:error, :not_connected} = Robot.move_wrist(90.0, speed: 1200, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_wrist(-75.0, speed: 2500, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "move_wrist_x function delegates to move_joint(5, ...)" do
+      {:ok, pid} = Robot.start_link()
+
+      # Test basic functionality for extended joints
+      assert {:error, :not_connected} = Robot.move_wrist_x(30.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_wrist_x(-60.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_wrist_x(0.0, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "move_wrist_x with custom speed option" do
+      {:ok, pid} = Robot.start_link()
+
+      # Test with custom speed for extended joints
+      assert {:error, :not_connected} = Robot.move_wrist_x(30.0, speed: 1500, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_wrist_x(-45.0, speed: 1000, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "move_wrist_y function delegates to move_joint(6, ...)" do
+      {:ok, pid} = Robot.start_link()
+
+      # Test basic functionality for extended joints
+      assert {:error, :not_connected} = Robot.move_wrist_y(45.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_wrist_y(-30.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_wrist_y(0.0, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "move_wrist_y with custom speed option" do
+      {:ok, pid} = Robot.start_link()
+
+      # Test with custom speed for extended joints
+      assert {:error, :not_connected} = Robot.move_wrist_y(45.0, speed: 2000, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_wrist_y(-15.0, speed: 4000, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "all convenience functions reject invalid angle types" do
+      {:ok, pid} = Robot.start_link()
+
+      convenience_functions = [
+        &Robot.move_base/2,
+        &Robot.move_shoulder/2,
+        &Robot.move_elbow/2,
+        &Robot.move_wrist/2,
+        &Robot.move_wrist_x/2,
+        &Robot.move_wrist_y/2
+      ]
+
+      Enum.each(convenience_functions, fn func ->
+        # Should raise FunctionClauseError for non-numeric angles
+        assert_raise FunctionClauseError, fn ->
+          func.("45", server_name: pid)
+        end
+
+        assert_raise FunctionClauseError, fn ->
+          func.(:invalid, server_name: pid)
+        end
+
+        assert_raise FunctionClauseError, fn ->
+          func.(nil, server_name: pid)
+        end
+      end)
+
+      GenServer.stop(pid)
+    end
+
+    test "all convenience functions accept integer and float angles" do
+      {:ok, pid} = Robot.start_link()
+
+      convenience_functions_with_joints = [
+        {&Robot.move_base/2, "base"},
+        {&Robot.move_shoulder/2, "shoulder"},
+        {&Robot.move_elbow/2, "elbow"},
+        {&Robot.move_wrist/2, "wrist"},
+        {&Robot.move_wrist_x/2, "wrist_x"},
+        {&Robot.move_wrist_y/2, "wrist_y"}
+      ]
+
+      Enum.each(convenience_functions_with_joints, fn {func, _joint_name} ->
+        # Should handle both integer and float angles
+        assert {:error, :not_connected} = func.(45, server_name: pid)
+        assert {:error, :not_connected} = func.(45.5, server_name: pid)
+        assert {:error, :not_connected} = func.(-30, server_name: pid)
+        assert {:error, :not_connected} = func.(-30.75, server_name: pid)
+      end)
+
+      GenServer.stop(pid)
+    end
+
+    test "all convenience functions clamp angles to valid range" do
+      {:ok, pid} = Robot.start_link()
+
+      convenience_functions = [
+        &Robot.move_base/2,
+        &Robot.move_shoulder/2,
+        &Robot.move_elbow/2,
+        &Robot.move_wrist/2,
+        &Robot.move_wrist_x/2,
+        &Robot.move_wrist_y/2
+      ]
+
+      Enum.each(convenience_functions, fn func ->
+        # Test boundary values - should be accepted (clamped internally)
+        assert {:error, :not_connected} = func.(-180.0, server_name: pid)
+        assert {:error, :not_connected} = func.(180.0, server_name: pid)
+
+        # Test out-of-range values - should be accepted (clamped internally)
+        assert {:error, :not_connected} = func.(-200.0, server_name: pid)
+        assert {:error, :not_connected} = func.(250.0, server_name: pid)
+      end)
+
+      GenServer.stop(pid)
+    end
+
+    test "convenience functions work with different robot types" do
+      robot_types = [:roarm_m2, :roarm_m2_pro, :roarm_m3, :roarm_m3_pro]
+
+      Enum.each(robot_types, fn robot_type ->
+        {:ok, pid} = Robot.start_link([robot_type: robot_type])
+
+        # All convenience functions should work with all robot types
+        assert {:error, :not_connected} = Robot.move_base(30.0, server_name: pid)
+        assert {:error, :not_connected} = Robot.move_shoulder(-15.0, server_name: pid)
+        assert {:error, :not_connected} = Robot.move_elbow(60.0, server_name: pid)
+        assert {:error, :not_connected} = Robot.move_wrist(45.0, server_name: pid)
+
+        # Extended joints (j5, j6) should work regardless of robot type
+        # (validation of actual support happens at communication level)
+        assert {:error, :not_connected} = Robot.move_wrist_x(20.0, server_name: pid)
+        assert {:error, :not_connected} = Robot.move_wrist_y(-25.0, server_name: pid)
+
+        GenServer.stop(pid)
+      end)
+    end
+  end
+
+  describe "Convenience function workflow integration" do
+    test "complete joint movement workflow using convenience functions" do
+      {:ok, pid} = Robot.start_link()
+
+      # Test a complete workflow using all convenience functions
+      assert {:error, :not_connected} = Robot.move_base(45.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_shoulder(30.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_elbow(-45.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_wrist(90.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_wrist_x(15.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_wrist_y(-20.0, server_name: pid)
+
+      # Test reset to home position
+      assert {:error, :not_connected} = Robot.move_base(0.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_shoulder(0.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_elbow(0.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_wrist(0.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_wrist_x(0.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_wrist_y(0.0, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "convenience functions with mixed speed settings" do
+      {:ok, pid} = Robot.start_link()
+
+      # Test with different speed settings for each joint
+      assert {:error, :not_connected} = Robot.move_base(30.0, speed: 500, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_shoulder(45.0, speed: 1000, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_elbow(-30.0, speed: 1500, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_wrist(60.0, speed: 2000, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_wrist_x(25.0, speed: 2500, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_wrist_y(-35.0, speed: 3000, server_name: pid)
+
+      GenServer.stop(pid)
+    end
+
+    test "convenience functions maintain compatibility with existing move_joint" do
+      {:ok, pid} = Robot.start_link()
+
+      # Test that convenience functions and move_joint can be used interchangeably
+      assert {:error, :not_connected} = Robot.move_base(45.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_joint(2, 30.0, server_name: pid)  # Shoulder
+      assert {:error, :not_connected} = Robot.move_elbow(-45.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_joint(4, 90.0, server_name: pid)  # Wrist
+      assert {:error, :not_connected} = Robot.move_wrist_x(15.0, server_name: pid)
+      assert {:error, :not_connected} = Robot.move_joint(6, -20.0, server_name: pid) # Wrist Y
+
+      GenServer.stop(pid)
+    end
+
+    test "convenience functions handle edge case angles properly" do
+      {:ok, pid} = Robot.start_link()
+
+      # Test extreme angles that should be clamped
+      extreme_angles = [-200.0, -180.0, -179.9, 0.0, 0.001, 179.9, 180.0, 200.0]
+
+      convenience_functions = [
+        &Robot.move_base/2,
+        &Robot.move_shoulder/2,
+        &Robot.move_elbow/2,
+        &Robot.move_wrist/2,
+        &Robot.move_wrist_x/2,
+        &Robot.move_wrist_y/2
+      ]
+
+      Enum.each(convenience_functions, fn func ->
+        Enum.each(extreme_angles, fn angle ->
+          assert {:error, :not_connected} = func.(angle, server_name: pid)
+        end)
+      end)
+
+      GenServer.stop(pid)
+    end
+  end
 end

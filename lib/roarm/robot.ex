@@ -269,6 +269,184 @@ defmodule Roarm.Robot do
   end
 
   @doc """
+  Move the base joint (j1) to a specific angle.
+
+  The base joint controls rotation around the vertical axis, allowing the robot
+  to rotate left and right.
+
+  ## Parameters
+    - `angle` - Target angle in degrees (-180.0 to 180.0)
+    - `opts` - Optional parameters:
+      - `:speed` - Movement speed (1-4096, default: 1000)
+      - `:timeout` - Command timeout in milliseconds (default: from config)
+      - `:server_name` - Robot server name (default: __MODULE__)
+
+  ## Examples
+      # Rotate base to the right by 45 degrees
+      Roarm.Robot.move_base(45.0)
+
+      # Rotate base to the left by 90 degrees with custom speed
+      Roarm.Robot.move_base(-90.0, speed: 2000)
+
+      # Move base to center position
+      Roarm.Robot.move_base(0.0)
+  """
+  @doc group: :movement
+  @spec move_base(number(), keyword()) :: {:ok, any()} | {:error, any()}
+  def move_base(angle, opts \\ []) when is_number(angle) do
+    move_joint(1, angle, opts)
+  end
+
+  @doc """
+  Move the shoulder joint (j2) to a specific angle.
+
+  The shoulder joint controls the arm's lift and lower movement, raising
+  and lowering the entire arm assembly.
+
+  ## Parameters
+    - `angle` - Target angle in degrees (-180.0 to 180.0)
+    - `opts` - Optional parameters:
+      - `:speed` - Movement speed (1-4096, default: 1000)
+      - `:timeout` - Command timeout in milliseconds (default: from config)
+      - `:server_name` - Robot server name (default: __MODULE__)
+
+  ## Examples
+      # Raise the arm by 45 degrees
+      Roarm.Robot.move_shoulder(45.0)
+
+      # Lower the arm by 30 degrees with custom speed
+      Roarm.Robot.move_shoulder(-30.0, speed: 1500)
+
+      # Move shoulder to neutral position
+      Roarm.Robot.move_shoulder(0.0)
+  """
+  @doc group: :movement
+  @spec move_shoulder(number(), keyword()) :: {:ok, any()} | {:error, any()}
+  def move_shoulder(angle, opts \\ []) when is_number(angle) do
+    move_joint(2, angle, opts)
+  end
+
+  @doc """
+  Move the elbow joint (j3) to a specific angle.
+
+  The elbow joint controls the forearm angle, allowing the robot to bend
+  and extend its forearm relative to the upper arm.
+
+  ## Parameters
+    - `angle` - Target angle in degrees (-180.0 to 180.0)
+    - `opts` - Optional parameters:
+      - `:speed` - Movement speed (1-4096, default: 1000)
+      - `:timeout` - Command timeout in milliseconds (default: from config)
+      - `:server_name` - Robot server name (default: __MODULE__)
+
+  ## Examples
+      # Bend the elbow inward by 90 degrees
+      Roarm.Robot.move_elbow(90.0)
+
+      # Extend the elbow outward by 45 degrees with custom speed
+      Roarm.Robot.move_elbow(-45.0, speed: 800)
+
+      # Move elbow to straight position
+      Roarm.Robot.move_elbow(0.0)
+  """
+  @doc group: :movement
+  @spec move_elbow(number(), keyword()) :: {:ok, any()} | {:error, any()}
+  def move_elbow(angle, opts \\ []) when is_number(angle) do
+    move_joint(3, angle, opts)
+  end
+
+  @doc """
+  Move the wrist rotation joint (j4) to a specific angle.
+
+  The wrist joint controls the rotation of the end effector around its axis,
+  allowing the gripper or tool to rotate.
+
+  ## Parameters
+    - `angle` - Target angle in degrees (-180.0 to 180.0)
+    - `opts` - Optional parameters:
+      - `:speed` - Movement speed (1-4096, default: 1000)
+      - `:timeout` - Command timeout in milliseconds (default: from config)
+      - `:server_name` - Robot server name (default: __MODULE__)
+
+  ## Examples
+      # Rotate wrist clockwise by 90 degrees
+      Roarm.Robot.move_wrist(90.0)
+
+      # Rotate wrist counter-clockwise by 45 degrees with custom speed
+      Roarm.Robot.move_wrist(-45.0, speed: 1200)
+
+      # Reset wrist to neutral position
+      Roarm.Robot.move_wrist(0.0)
+  """
+  @doc group: :movement
+  @spec move_wrist(number(), keyword()) :: {:ok, any()} | {:error, any()}
+  def move_wrist(angle, opts \\ []) when is_number(angle) do
+    move_joint(4, angle, opts)
+  end
+
+  @doc """
+  Move the wrist X-axis joint (j5) to a specific angle.
+
+  The wrist X-axis joint provides additional wrist movement for extended robot models
+  (M3, M3 Pro). This joint controls wrist movement along the X-axis.
+
+  Note: This function is only available on robot models with 6 degrees of freedom.
+
+  ## Parameters
+    - `angle` - Target angle in degrees (-180.0 to 180.0)
+    - `opts` - Optional parameters:
+      - `:speed` - Movement speed (1-4096, default: 1000)
+      - `:timeout` - Command timeout in milliseconds (default: from config)
+      - `:server_name` - Robot server name (default: __MODULE__)
+
+  ## Examples
+      # Move wrist X-axis by 30 degrees
+      Roarm.Robot.move_wrist_x(30.0)
+
+      # Move wrist X-axis with custom speed
+      Roarm.Robot.move_wrist_x(-60.0, speed: 1500)
+
+      # Reset wrist X-axis to neutral position
+      Roarm.Robot.move_wrist_x(0.0)
+  """
+  @doc group: :movement
+  @spec move_wrist_x(number(), keyword()) :: {:ok, any()} | {:error, any()}
+  def move_wrist_x(angle, opts \\ []) when is_number(angle) do
+    move_joint(5, angle, opts)
+  end
+
+  @doc """
+  Move the wrist Y-axis joint (j6) to a specific angle.
+
+  The wrist Y-axis joint provides additional wrist movement for extended robot models
+  (M3, M3 Pro). This joint controls wrist movement along the Y-axis.
+
+  Note: This function is only available on robot models with 6 degrees of freedom.
+
+  ## Parameters
+    - `angle` - Target angle in degrees (-180.0 to 180.0)
+    - `opts` - Optional parameters:
+      - `:speed` - Movement speed (1-4096, default: 1000)
+      - `:timeout` - Command timeout in milliseconds (default: from config)
+      - `:server_name` - Robot server name (default: __MODULE__)
+
+  ## Examples
+      # Move wrist Y-axis by 45 degrees
+      Roarm.Robot.move_wrist_y(45.0)
+
+      # Move wrist Y-axis with custom speed
+      Roarm.Robot.move_wrist_y(-30.0, speed: 2000)
+
+      # Reset wrist Y-axis to neutral position
+      Roarm.Robot.move_wrist_y(0.0)
+  """
+  @doc group: :movement
+  @spec move_wrist_y(number(), keyword()) :: {:ok, any()} | {:error, any()}
+  def move_wrist_y(angle, opts \\ []) when is_number(angle) do
+    move_joint(6, angle, opts)
+  end
+
+  @doc """
   Move the robot to its home position.
 
   ## Options
